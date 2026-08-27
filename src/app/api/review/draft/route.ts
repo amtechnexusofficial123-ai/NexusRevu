@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { businesses, reviewSessions } from "@/db/schema";
+import { draftReviewWithGemini, isGeminiConfigured } from "@/lib/gemini";
 import { draftReview } from "@/lib/reviewDraft";
 import { googleWriteReviewUrl } from "@/lib/qr";
 import { formatAnswerForDisplay, type QuestionType } from "@/lib/questionTypes";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 type Body = {
   slug: string;
@@ -26,7 +27,29 @@ export async function POST(req: NextRequest) {
     answer: formatAnswerForDisplay(a.type ?? "text", a.answer),
   }));
 
-  const { draftText, sentiment } = await draftReview(business.name, formatted);
+  let draftText: string;
+  let sentiment: string;
+
+  if (isGeminiConfigured()) {
+    const recentRows = await db
+      .select({ draftText: reviewSessions.draftText })
+      .from(reviewSessions)
+      .where(eq(reviewSessions.businessId, business.id))
+      .orderBy(desc(reviewSessions.createdAt))
+      .limit(10);
+
+    const recentDrafts = recentRows
+      .map((r) => r.draftText)
+      .filter((t): t is string => Boolean(t?.trim()));
+
+    const result = await draftReviewWithGemini(business.name, formatted, recentDrafts);
+    draftText = result.draftText;
+    sentiment = result.sentiment;
+  } else {
+    const result = draftReview(business.name, formatted);
+    draftText = result.draftText;
+    sentiment = result.sentiment;
+  }
 
   await db.insert(reviewSessions).values({
     businessId: business.id,

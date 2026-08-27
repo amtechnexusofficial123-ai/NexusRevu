@@ -53,8 +53,15 @@ function estimateSentiment(qas: QA[]): DraftResult["sentiment"] {
   return "neutral";
 }
 
-/** Picks 3 random questions out of the business's active question pool. */
-export function pickRandomQuestions<T>(pool: T[], count = 3): T[] {
+/** How many questions to show: 3 or 4 when the pool is large enough. */
+export function pickQuestionCount(poolSize: number): number {
+  if (poolSize <= 3) return poolSize;
+  return 3 + Math.floor(Math.random() * 2);
+}
+
+/** Picks random questions out of the business's active question pool. */
+export function pickRandomQuestions<T>(pool: T[], count?: number): T[] {
+  const n = count ?? pickQuestionCount(pool.length);
   const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  return shuffled.slice(0, Math.min(count, shuffled.length));
+  return shuffled.slice(0, Math.min(n, shuffled.length));
 }

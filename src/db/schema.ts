@@ -48,7 +48,7 @@ export const questions = pgTable("questions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
-// One row per customer session: which 3 questions were shown, their answers,
+// One row per customer session: which questions were shown, their answers,
 // and the drafted review text. Useful for the business to see history /
 // catch bad-sentiment sessions before they ever reach Google.
 export const reviewSessions = pgTable("review_sessions", {

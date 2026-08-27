@@ -2,7 +2,7 @@
 
 *By AM Technexus Labs*
 
-QR-based review collection: a customer scans a table QR, answers 3 randomly
+QR-based review collection: a customer scans a table QR, answers 3–4 randomly
 picked questions (out of up to 10 set by the business — open text, star rating,
 multiple choice, or dropdown), gets a drafted review from their answers, and
 finishes posting it on Google themselves.
@@ -36,7 +36,8 @@ internally so you can spot an unhappy customer and follow up privately.
 - Next.js 15 (App Router), deployed to Cloudflare Workers via `@opennextjs/cloudflare`
 - Neon Postgres (serverless HTTP driver — works on Cloudflare Workers)
 - Drizzle ORM
-- Template-based review drafting from customer answers (no AI API)
+- Template-based review drafting from customer answers (falls back when no AI key)
+- Google Gemini (`GEMINI_API_KEY`, default `gemini-3.6-flash`) for varied AI-drafted reviews when configured
 - `qrcode` npm package for QR generation
 - Cookie + JWT (jose) sessions, bcrypt password hashing
 
@@ -56,6 +57,7 @@ Copy `.env.example` to `.env` and fill in:
 
 - `DATABASE_URL` — from Neon
 - `AUTH_SECRET` — `openssl rand -base64 32`
+- `GEMINI_API_KEY` — optional, from [Google AI Studio](https://aistudio.google.com/apikey); when set, customer reviews are drafted with Gemini instead of templates
 
 ## 3. Run locally
 
@@ -80,10 +82,11 @@ Then set Worker secrets:
 ```bash
 npx wrangler secret put DATABASE_URL
 npx wrangler secret put AUTH_SECRET
+npx wrangler secret put GEMINI_API_KEY
 ```
 
 Or in the Cloudflare dashboard: Workers → your project → Settings → Variables
-and Secrets → add `DATABASE_URL` and `AUTH_SECRET`.
+and Secrets → add `DATABASE_URL`, `AUTH_SECRET`, and optionally `GEMINI_API_KEY`.
 
 ## 5. Push to GitHub
 

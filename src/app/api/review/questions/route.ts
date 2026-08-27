@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { businesses, questions } from "@/db/schema";
-import { pickRandomQuestions } from "@/lib/reviewDraft";
+import { pickQuestionCount, pickRandomQuestions } from "@/lib/reviewDraft";
 import { eq, and } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {
@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "This business hasn't set up any questions yet" }, { status: 404 });
   }
 
-  const picked = pickRandomQuestions(pool, 3);
+  const picked = pickRandomQuestions(pool, pickQuestionCount(pool.length));
 
   return NextResponse.json({
     business: { name: business.name, logoUrl: business.logoUrl, slug: business.slug },

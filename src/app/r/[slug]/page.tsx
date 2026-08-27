@@ -88,7 +88,7 @@ export default function CustomerReviewPage({
           <img src={business.logoUrl} alt={business.name} className="mb-3 h-14 w-14 rounded-full object-cover" />
         )}
         <h1 className="font-display text-2xl text-ink">{business?.name}</h1>
-        <p className="mt-1 text-sm text-ink/60">Three quick questions, then you're done.</p>
+        <p className="mt-1 text-sm text-ink/60">A few quick questions, then you're done.</p>
       </div>
 
       {(step === "answering" || step === "drafting") && (

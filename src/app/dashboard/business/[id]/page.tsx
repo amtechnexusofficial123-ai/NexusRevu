@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { fileToLogoDataUrl } from "@/lib/logoUpload";
+import { downloadQrImage } from "@/lib/qrDownload";
 
 type Business = {
   id: string;
@@ -43,6 +44,7 @@ export default function BusinessDetailPage({
   const [reviewUrl, setReviewUrl] = useState<string | null>(null);
   const [manageQrDataUrl, setManageQrDataUrl] = useState<string | null>(null);
   const [manageUrl, setManageUrl] = useState<string | null>(null);
+  const [downloadingReviewQr, setDownloadingReviewQr] = useState(false);
 
   useEffect(() => {
     if (isNew) return;
@@ -126,6 +128,22 @@ export default function BusinessDetailPage({
     }
     setBusiness(data.business);
     setDetailsMessage("Saved.");
+  }
+
+  async function handleDownloadReviewQr() {
+    if (!reviewQrDataUrl || !business) return;
+    setDownloadingReviewQr(true);
+    try {
+      await downloadQrImage(
+        reviewQrDataUrl,
+        `${business.slug}-review-qr.png`,
+        business.logoUrl ?? logoUrl
+      );
+    } catch {
+      setDetailsError("Could not download QR image");
+    } finally {
+      setDownloadingReviewQr(false);
+    }
   }
 
   if (loading) return <p className="text-ink/60">Loading…</p>;
@@ -298,7 +316,7 @@ export default function BusinessDetailPage({
         <div className="card flex flex-col items-center gap-4 text-center">
           <h2 className="font-display text-lg text-ink">Customer review QR</h2>
           <p className="max-w-md text-sm text-ink/60">
-            Put this on the table. Customers scan it, answer 3 random questions, and get a review
+            Put this on the table. Customers scan it, answer 3–4 random questions, and get a review
             draft to post on Google.
           </p>
           {reviewQrDataUrl ? (
@@ -313,18 +331,14 @@ export default function BusinessDetailPage({
           {reviewUrl && <p className="break-all text-xs text-ink/50">{reviewUrl}</p>}
           <div className="flex flex-wrap justify-center gap-3">
             {reviewQrDataUrl && (
-              <a
-                href={reviewQrDataUrl}
-                download={`${business?.slug}-review-qr.png`}
+              <button
+                type="button"
+                onClick={handleDownloadReviewQr}
+                disabled={downloadingReviewQr}
                 className="btn-secondary"
               >
-                Download QR
-              </a>
-            )}
-            {reviewUrl && (
-              <a href={reviewUrl} target="_blank" rel="noreferrer" className="btn-secondary">
-                Preview flow
-              </a>
+                {downloadingReviewQr ? "Preparing…" : "Download QR"}
+              </button>
             )}
           </div>
         </div>

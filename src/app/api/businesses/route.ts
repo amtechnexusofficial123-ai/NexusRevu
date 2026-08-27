@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { businesses } from "@/db/schema";
 import { getSessionAdminId } from "@/lib/auth";
+import { normalizeLogoUrl } from "@/lib/logoValidation";
 import { nanoid } from "nanoid";
 import { eq, desc } from "drizzle-orm";
 
@@ -37,6 +38,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Business name is required" }, { status: 400 });
   }
 
+  const logo = normalizeLogoUrl(logoUrl ?? null);
+  if (logo && typeof logo === "object" && "error" in logo) {
+    return NextResponse.json({ error: logo.error }, { status: 400 });
+  }
+
   const slug = `${slugify(name)}-${nanoid(5)}`;
   const manageToken = nanoid(24);
 
@@ -46,7 +52,7 @@ export async function POST(req: NextRequest) {
       adminId,
       name: name.trim(),
       address: address?.trim() || null,
-      logoUrl: logoUrl?.trim() || null,
+      logoUrl: logo,
       googlePlaceId: googlePlaceId?.trim() || null,
       slug,
       manageToken,

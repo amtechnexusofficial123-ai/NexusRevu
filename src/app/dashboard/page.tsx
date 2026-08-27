@@ -11,37 +11,63 @@ type Business = {
   logoUrl: string | null;
 };
 
+type DeleteStep = "confirm" | "typeYes";
+
 export default function HomePage() {
   const router = useRouter();
   const [businesses, setBusinesses] = useState<Business[] | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Business | null>(null);
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>("confirm");
+  const [confirmText, setConfirmText] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/businesses")
-      .then((r) => r.json())
-      .then((data) => setBusinesses(data.businesses ?? []));
+      .then(async (r) => {
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error ?? "Failed to load businesses");
+        setBusinesses(data.businesses ?? []);
+      })
+      .catch(() => setBusinesses([]));
   }, []);
 
-  async function handleDelete(business: Business, e: React.MouseEvent) {
+  function openDelete(business: Business, e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
+    setPendingDelete(business);
+    setDeleteStep("confirm");
+    setConfirmText("");
+    setDeleteError(null);
+  }
 
-    const ok = window.confirm(
-      `Delete “${business.name}”? Its QR link will stop working, and questions and review history will be removed.`
-    );
-    if (!ok) return;
+  function closeDelete() {
+    if (deletingId) return;
+    setPendingDelete(null);
+    setDeleteStep("confirm");
+    setConfirmText("");
+    setDeleteError(null);
+  }
 
-    setDeletingId(business.id);
-    const res = await fetch(`/api/businesses/${business.id}`, { method: "DELETE" });
+  async function performDelete() {
+    if (!pendingDelete || confirmText !== "Yes") return;
+
+    setDeletingId(pendingDelete.id);
+    setDeleteError(null);
+    const res = await fetch(`/api/businesses/${pendingDelete.id}`, { method: "DELETE" });
     setDeletingId(null);
 
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
-      alert(data.error ?? "Could not delete business");
+      setDeleteError(data.error ?? "Could not delete business");
       return;
     }
 
-    setBusinesses((list) => (list ?? []).filter((b) => b.id !== business.id));
+    const id = pendingDelete.id;
+    setPendingDelete(null);
+    setDeleteStep("confirm");
+    setConfirmText("");
+    setBusinesses((list) => (list ?? []).filter((b) => b.id !== id));
   }
 
   return (
@@ -96,17 +122,110 @@ export default function HomePage() {
               </Link>
               <button
                 type="button"
-                onClick={(e) => handleDelete(b, e)}
+                onClick={(e) => openDelete(b, e)}
                 disabled={deletingId === b.id}
-                className="shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-700 transition hover:bg-red-50 disabled:opacity-50"
+                className="shrink-0 rounded-lg p-2 text-ink/45 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                 aria-label={`Delete ${b.name}`}
+                title="Delete business"
               >
-                {deletingId === b.id ? "Deleting…" : "Delete"}
+                <TrashIcon className="h-5 w-5" />
               </button>
             </div>
           ))}
         </div>
       )}
+
+      {pendingDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
+          onClick={closeDelete}
+        >
+          <div
+            className="card w-full max-w-md shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-dialog-title"
+          >
+            {deleteStep === "confirm" ? (
+              <>
+                <h2 id="delete-dialog-title" className="font-display text-xl text-ink">
+                  Delete “{pendingDelete.name}”?
+                </h2>
+                <p className="mt-2 text-sm text-ink/65">
+                  Its QR links will stop working, and questions and review history will be removed.
+                  This can’t be undone.
+                </p>
+                <div className="mt-6 flex justify-end gap-3">
+                  <button type="button" onClick={closeDelete} className="btn-secondary">
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDeleteStep("typeYes")}
+                    className="inline-flex items-center justify-center rounded-card bg-red-600 px-5 py-3 font-body text-sm font-semibold text-white transition hover:bg-red-700"
+                  >
+                    Yes
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <h2 id="delete-dialog-title" className="font-display text-xl text-ink">
+                  Type Yes to confirm
+                </h2>
+                <p className="mt-2 text-sm text-ink/65">
+                  Type <span className="font-semibold text-ink">Yes</span> below to permanently
+                  delete “{pendingDelete.name}”.
+                </p>
+                <input
+                  className="input mt-4"
+                  autoFocus
+                  value={confirmText}
+                  onChange={(e) => setConfirmText(e.target.value)}
+                  placeholder="Yes"
+                  aria-label="Type Yes to confirm deletion"
+                />
+                {deleteError && <p className="mt-3 text-sm text-red-600">{deleteError}</p>}
+                <div className="mt-6 flex justify-end gap-3">
+                  <button type="button" onClick={closeDelete} className="btn-secondary" disabled={!!deletingId}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={performDelete}
+                    disabled={confirmText !== "Yes" || !!deletingId}
+                    className="inline-flex items-center justify-center rounded-card bg-red-600 px-5 py-3 font-body text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {deletingId ? "Deleting…" : "Delete permanently"}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
+  );
+}
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4h8v2" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6" />
+      <path d="M14 11v6" />
+    </svg>
   );
 }

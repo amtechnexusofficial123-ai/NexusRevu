@@ -82,74 +82,92 @@ export default function ManageQuestionsPage({
       setSaveError(data.error ?? "Something went wrong");
       return;
     }
-    setQuestions(data.questions);
-    setMessage(cleaned.length === 0 ? "All questions removed." : "Questions saved.");
+    setQuestions(data.questions.length ? data.questions : [{ ...EMPTY_QUESTION }]);
+    if (data.questions.length === 0) setExpandedIndex(0);
+    setMessage(cleaned.length === 0 ? "Cleared. Add a question when you’re ready." : "Saved.");
   }
 
   if (step === "loading") {
     return (
-      <main className="flex min-h-screen items-center justify-center px-6 text-ink/70">Loading…</main>
+      <main className="flex min-h-[100dvh] items-center justify-center px-5 text-ink/70">Loading…</main>
     );
   }
   if (step === "error") {
     return (
-      <main className="flex min-h-screen items-center justify-center px-6 text-center text-ink/70">
+      <main className="flex min-h-[100dvh] items-center justify-center px-5 text-center text-ink/70">
         {errorMsg}
       </main>
     );
   }
 
+  const count = questions.filter((q) => q.text.trim()).length;
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col px-6 py-10">
-      <div className="mb-6 flex flex-col items-center text-center">
-        {logoUrl && (
-          <img src={logoUrl} alt={businessName} className="mb-3 h-14 w-14 rounded-full object-cover" />
-        )}
-        <h1 className="font-display text-2xl text-ink">{businessName}</h1>
-        <p className="mt-1 text-sm text-ink/60">Update the questions customers will answer.</p>
-      </div>
-
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <p className="text-sm text-ink/60">
-          {questions.filter((q) => q.text.trim()).length} / {MAX_QUESTIONS} questions
-        </p>
-        <button
-          type="button"
-          onClick={addQuestion}
-          disabled={questions.length >= MAX_QUESTIONS}
-          className="btn-secondary py-2 text-xs"
-        >
-          + Add question
-        </button>
-      </div>
-
-      {questions.length === 0 ? (
-        <div className="card mb-4 text-center text-sm text-ink/60">
-          No questions yet. Tap “Add question” to create your first one.
+    <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col bg-[#FAF9F6]">
+      <header className="sticky top-0 z-10 border-b border-ink/10 bg-[#FAF9F6]/95 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] backdrop-blur">
+        <div className="flex items-center gap-3">
+          {logoUrl ? (
+            <img src={logoUrl} alt="" className="h-11 w-11 rounded-full object-cover" />
+          ) : (
+            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-light font-display text-brand">
+              {businessName.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display text-lg leading-tight text-ink">{businessName}</h1>
+            <p className="text-xs text-ink/55">
+              {count} / {MAX_QUESTIONS} questions · edit & save
+            </p>
+          </div>
         </div>
-      ) : (
-        <ul className="mb-4 flex flex-col gap-2.5">
-          {questions.map((q, i) => (
-            <QuestionEditorRow
-              key={i}
-              q={q}
-              expanded={expandedIndex === i}
-              onToggleExpand={() => setExpandedIndex(expandedIndex === i ? null : i)}
-              onChange={(updated) => updateQuestion(i, updated)}
-              onRemove={() => removeQuestion(i)}
-            />
-          ))}
-        </ul>
-      )}
+      </header>
 
-      {saveError && <p className="mb-3 text-sm text-red-600">{saveError}</p>}
-      {message && <p className="mb-3 text-sm text-brand">{message}</p>}
+      <div className="flex-1 px-4 py-4 pb-[calc(7.5rem+env(safe-area-inset-bottom))]">
+        {questions.length === 0 ? (
+          <div className="rounded-2xl border border-ink/10 bg-white px-4 py-10 text-center text-sm text-ink/60">
+            No questions yet. Tap Add below to create one.
+          </div>
+        ) : (
+          <ul className="flex flex-col gap-3">
+            {questions.map((q, i) => (
+              <QuestionEditorRow
+                key={i}
+                phone
+                index={i}
+                q={q}
+                expanded={expandedIndex === i}
+                onToggleExpand={() => setExpandedIndex(expandedIndex === i ? null : i)}
+                onChange={(updated) => updateQuestion(i, updated)}
+                onRemove={() => removeQuestion(i)}
+              />
+            ))}
+          </ul>
+        )}
 
-      <button type="button" onClick={handleSave} disabled={saving} className="btn-primary">
-        {saving ? "Saving…" : "Save questions"}
-      </button>
+        {saveError && <p className="mt-3 text-sm text-red-600">{saveError}</p>}
+        {message && <p className="mt-3 text-sm text-brand">{message}</p>}
+      </div>
 
-      <p className="mt-8 text-center text-[11px] text-ink/30">NexusRevu, by AM Technexus Labs</p>
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-ink/10 bg-white/95 px-4 pt-3 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <div className="mx-auto flex max-w-md gap-2">
+          <button
+            type="button"
+            onClick={addQuestion}
+            disabled={questions.length >= MAX_QUESTIONS}
+            className="btn-secondary min-h-[52px] flex-1 text-sm"
+          >
+            + Add
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={saving}
+            className="btn-primary min-h-[52px] flex-[1.4] text-sm"
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
+        </div>
+      </div>
     </main>
   );
 }

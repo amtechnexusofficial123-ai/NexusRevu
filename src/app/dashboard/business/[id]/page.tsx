@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
+import { fileToLogoDataUrl } from "@/lib/logoUpload";
 
 type Business = {
   id: string;
@@ -22,6 +23,7 @@ export default function BusinessDetailPage({
   const { id } = use(params);
   const router = useRouter();
   const isNew = id === "new";
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [tab, setTab] = useState<Tab>("details");
   const [business, setBusiness] = useState<Business | null>(null);
@@ -33,6 +35,7 @@ export default function BusinessDetailPage({
   const [logoUrl, setLogoUrl] = useState("");
   const [googlePlaceId, setGooglePlaceId] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [detailsMessage, setDetailsMessage] = useState<string | null>(null);
   const [detailsError, setDetailsError] = useState<string | null>(null);
 
@@ -65,6 +68,23 @@ export default function BusinessDetailPage({
         setManageUrl(data.manageUrl);
       });
   }, [id, isNew]);
+
+  async function handleLogoFile(file: File | null) {
+    if (!file) return;
+    setDetailsError(null);
+    setDetailsMessage(null);
+    setUploadingLogo(true);
+    try {
+      const dataUrl = await fileToLogoDataUrl(file);
+      setLogoUrl(dataUrl);
+      setDetailsMessage("Logo ready — save changes to keep it.");
+    } catch (err) {
+      setDetailsError(err instanceof Error ? err.message : "Could not read that image");
+    } finally {
+      setUploadingLogo(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  }
 
   async function handleSaveDetails(e: React.FormEvent) {
     e.preventDefault();
@@ -159,13 +179,53 @@ export default function BusinessDetailPage({
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-ink/80">Logo URL</label>
-            <input
-              className="input"
-              placeholder="https://…/logo.png"
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-            />
+            <label className="mb-2 block text-sm font-medium text-ink/80">Logo</label>
+            <div className="flex flex-wrap items-center gap-4">
+              {logoUrl ? (
+                <img
+                  src={logoUrl}
+                  alt="Business logo preview"
+                  className="h-16 w-16 rounded-full border border-ink/10 object-cover"
+                />
+              ) : (
+                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-light font-display text-xl text-brand">
+                  {(name || "?").charAt(0).toUpperCase()}
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => handleLogoFile(e.target.files?.[0] ?? null)}
+                />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={uploadingLogo}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  {uploadingLogo ? "Uploading…" : logoUrl ? "Change logo" : "Upload logo"}
+                </button>
+                {logoUrl && (
+                  <button
+                    type="button"
+                    className="btn-secondary text-red-600"
+                    disabled={uploadingLogo}
+                    onClick={() => {
+                      setLogoUrl("");
+                      setDetailsMessage("Logo removed — save changes to keep it.");
+                    }}
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="mt-2 text-xs text-ink/50">
+              PNG, JPG, or WebP up to 5MB. We&apos;ll resize it automatically.
+            </p>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-ink/80">Google Place ID</label>
@@ -190,7 +250,7 @@ export default function BusinessDetailPage({
           </div>
           {detailsError && <p className="text-sm text-red-600">{detailsError}</p>}
           {detailsMessage && <p className="text-sm text-brand">{detailsMessage}</p>}
-          <button className="btn-primary self-start" disabled={savingDetails}>
+          <button className="btn-primary self-start" disabled={savingDetails || uploadingLogo}>
             {savingDetails ? "Saving…" : isNew ? "Create business" : "Save changes"}
           </button>
         </form>

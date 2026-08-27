@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { businesses } from "@/db/schema";
 import { getSessionAdminId } from "@/lib/auth";
+import { normalizeLogoUrl } from "@/lib/logoValidation";
 import { eq, and } from "drizzle-orm";
 
 async function loadOwned(id: string, adminId: string) {
@@ -33,12 +34,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const { name, address, logoUrl, googlePlaceId } = await req.json();
 
+  let normalizedLogo: string | null | undefined = undefined;
+  if (logoUrl !== undefined) {
+    const logo = normalizeLogoUrl(logoUrl);
+    if (logo && typeof logo === "object" && "error" in logo) {
+      return NextResponse.json({ error: logo.error }, { status: 400 });
+    }
+    normalizedLogo = logo;
+  }
+
   const [updated] = await db
     .update(businesses)
     .set({
       ...(name !== undefined && { name }),
       ...(address !== undefined && { address }),
-      ...(logoUrl !== undefined && { logoUrl }),
+      ...(normalizedLogo !== undefined && { logoUrl: normalizedLogo }),
       ...(googlePlaceId !== undefined && { googlePlaceId }),
     })
     .where(eq(businesses.id, id))

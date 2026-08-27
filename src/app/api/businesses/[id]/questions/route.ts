@@ -5,7 +5,6 @@ import { getSessionAdminId } from "@/lib/auth";
 import { needsOptions, type QuestionType } from "@/lib/questionTypes";
 import { eq, and } from "drizzle-orm";
 
-export const runtime = "edge";
 const MAX_QUESTIONS = 10;
 const VALID_TYPES: QuestionType[] = ["text", "rating", "multiple_choice", "dropdown"];
 

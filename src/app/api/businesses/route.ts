@@ -5,8 +5,6 @@ import { getSessionAdminId } from "@/lib/auth";
 import { nanoid } from "nanoid";
 import { eq, desc } from "drizzle-orm";
 
-export const runtime = "edge";
-
 function slugify(name: string) {
   return (
     name

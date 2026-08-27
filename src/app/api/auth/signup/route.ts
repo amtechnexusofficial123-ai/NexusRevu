@@ -4,8 +4,6 @@ import { admins } from "@/db/schema";
 import { hashPassword, createSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
-export const runtime = "edge";
-
 export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
 

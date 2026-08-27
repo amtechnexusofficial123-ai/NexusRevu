@@ -6,8 +6,6 @@ import { googleWriteReviewUrl } from "@/lib/qr";
 import { formatAnswerForDisplay, type QuestionType } from "@/lib/questionTypes";
 import { eq } from "drizzle-orm";
 
-export const runtime = "edge";
-
 type Body = {
   slug: string;
   answers: { questionId: string; question: string; type: QuestionType; answer: string | number }[];

@@ -4,8 +4,6 @@ import { businesses, questions } from "@/db/schema";
 import { pickRandomQuestions } from "@/lib/claude";
 import { eq, and } from "drizzle-orm";
 
-export const runtime = "edge";
-
 export async function GET(req: NextRequest) {
   const slug = req.nextUrl.searchParams.get("slug");
   if (!slug) return NextResponse.json({ error: "slug required" }, { status: 400 });

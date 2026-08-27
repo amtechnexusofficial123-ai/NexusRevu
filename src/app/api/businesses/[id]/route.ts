@@ -4,8 +4,6 @@ import { businesses } from "@/db/schema";
 import { getSessionAdminId } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 
-export const runtime = "edge";
-
 async function loadOwned(id: string, adminId: string) {
   const [business] = await db
     .select()

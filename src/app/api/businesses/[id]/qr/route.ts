@@ -5,8 +5,6 @@ import { getSessionAdminId } from "@/lib/auth";
 import { generateQrDataUrl } from "@/lib/qr";
 import { eq, and } from "drizzle-orm";
 
-export const runtime = "edge";
-
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const adminId = await getSessionAdminId();
   if (!adminId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

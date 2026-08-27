@@ -2,10 +2,10 @@
 
 *By AM Technexus Labs*
 
-QR-based review collection: a customer scans a table QR, answers 3 AI-picked
-questions (out of up to 10 set by the business — open text, star rating,
-multiple choice, or dropdown), gets an AI-drafted review, and finishes
-posting it on Google themselves.
+QR-based review collection: a customer scans a table QR, answers 3 randomly
+picked questions (out of up to 10 set by the business — open text, star rating,
+multiple choice, or dropdown), gets a drafted review from their answers, and
+finishes posting it on Google themselves.
 
 Brand assets (`nexusrevu-mark.svg`, `nexusrevu-lockup.svg`) live in `/public`
 and are already wired into the landing page, auth pages, dashboard nav, and
@@ -18,7 +18,7 @@ a review can only be submitted by the real customer, logged into their own
 Google account, on Google's own page. This app doesn't try to bypass that.
 Instead it:
 
-1. Drafts the review text with Claude from the customer's answers.
+1. Drafts the review text from the customer's answers.
 2. Copies that text to the customer's clipboard.
 3. Opens Google's official "write a review" link for your business
    (`https://search.google.com/local/writereview?placeid=...`).
@@ -33,10 +33,10 @@ internally so you can spot an unhappy customer and follow up privately.
 
 ## Stack
 
-- Next.js 14 (App Router), deployed to Cloudflare Pages via `@cloudflare/next-on-pages`
-- Neon Postgres (serverless HTTP driver — works over Cloudflare's edge runtime)
+- Next.js 15 (App Router), deployed to Cloudflare Workers via `@opennextjs/cloudflare`
+- Neon Postgres (serverless HTTP driver — works on Cloudflare Workers)
 - Drizzle ORM
-- Claude API (`claude-sonnet-4-6`) for drafting reviews
+- Template-based review drafting from customer answers (no AI API)
 - `qrcode` npm package for QR generation
 - Cookie + JWT (jose) sessions, bcrypt password hashing
 
@@ -56,7 +56,6 @@ Copy `.env.example` to `.env` and fill in:
 
 - `DATABASE_URL` — from Neon
 - `AUTH_SECRET` — `openssl rand -base64 32`
-- `ANTHROPIC_API_KEY` — from [console.anthropic.com](https://console.anthropic.com)
 
 ## 3. Run locally
 
@@ -73,16 +72,18 @@ and grab your QR from the dashboard.
 ## 4. Deploy to Cloudflare Pages (subdomain)
 
 ```bash
-npm run pages:build
-npx wrangler pages deploy .vercel/output/static --project-name=reviewflow
+npm run cf:build
+OPEN_NEXT_DEPLOY=true CI=true npx wrangler deploy
 ```
 
-Then in the Cloudflare dashboard:
-1. Pages → your project → **Custom domains** → add your subdomain
-   (e.g. `reviews.yourdomain.com`), pointing at your existing domain's zone.
-2. Settings → **Environment variables** → add `DATABASE_URL`, `AUTH_SECRET`,
-   `ANTHROPIC_API_KEY` (as *Encrypted*).
-3. Redeploy so the new env vars take effect.
+Then set Worker secrets:
+```bash
+npx wrangler secret put DATABASE_URL
+npx wrangler secret put AUTH_SECRET
+```
+
+Or in the Cloudflare dashboard: Workers → your project → Settings → Variables
+and Secrets → add `DATABASE_URL` and `AUTH_SECRET`.
 
 ## 5. Push to GitHub
 
@@ -103,7 +104,7 @@ Consider hooking up Cloudflare Pages' Git integration instead of manual
 ```
 src/
   db/            Drizzle schema + Neon client
-  lib/           auth, Claude drafting, QR + Google link helpers
+  lib/           auth, review drafting, QR + Google link helpers
   app/
     page.tsx             landing page
     login/ signup/        business auth

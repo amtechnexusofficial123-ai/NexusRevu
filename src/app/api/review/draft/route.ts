@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { businesses, reviewSessions } from "@/db/schema";
-import { draftReview } from "@/lib/claude";
+import { draftReview } from "@/lib/reviewDraft";
 import { googleWriteReviewUrl } from "@/lib/qr";
 import { formatAnswerForDisplay, type QuestionType } from "@/lib/questionTypes";
 import { eq } from "drizzle-orm";

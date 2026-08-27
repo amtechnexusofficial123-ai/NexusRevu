@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { businesses, questions } from "@/db/schema";
-import { pickRandomQuestions } from "@/lib/claude";
+import { pickRandomQuestions } from "@/lib/reviewDraft";
 import { eq, and } from "drizzle-orm";
 
 export async function GET(req: NextRequest) {

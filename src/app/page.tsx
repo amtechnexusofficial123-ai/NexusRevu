@@ -13,9 +13,9 @@ export default function Home() {
       </h1>
       <p className="mt-5 max-w-xl font-body text-base text-ink/70">
         Put a QR code on the table. Customers answer three quick questions —
-        star ratings, quick picks, or their own words — an AI turns their
-        answers into a genuine review, and they finish it off on Google in
-        their own words.
+        star ratings, quick picks, or their own words — we turn their answers
+        into a review draft, and they finish it off on Google in their own
+        words.
       </p>
       <div className="mt-8 flex gap-3">
         <Link href="/signup" className="btn-primary">

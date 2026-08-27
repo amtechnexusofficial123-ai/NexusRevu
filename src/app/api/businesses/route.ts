@@ -38,6 +38,7 @@ export async function POST(req: NextRequest) {
   }
 
   const slug = `${slugify(name)}-${nanoid(5)}`;
+  const manageToken = nanoid(24);
 
   const [business] = await db
     .insert(businesses)
@@ -48,6 +49,7 @@ export async function POST(req: NextRequest) {
       logoUrl: logoUrl?.trim() || null,
       googlePlaceId: googlePlaceId?.trim() || null,
       slug,
+      manageToken,
     })
     .returning();
 

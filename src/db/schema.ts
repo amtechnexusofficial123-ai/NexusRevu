@@ -23,6 +23,8 @@ export const businesses = pgTable("businesses", {
     .notNull()
     .references(() => admins.id, { onDelete: "cascade" }),
   slug: text("slug").notNull().unique(), // used in the customer-facing QR URL: /r/[slug]
+  // Secret token for the business-facing "manage questions" QR: /q/[manageToken]
+  manageToken: text("manage_token").unique(),
   name: text("name").notNull(),
   address: text("address"),
   logoUrl: text("logo_url"), // stored externally (R2 / any image host), we just keep the URL
@@ -47,7 +49,7 @@ export const questions = pgTable("questions", {
 });
 
 // One row per customer session: which 3 questions were shown, their answers,
-// and the AI-drafted review text. Useful for the business to see history /
+// and the drafted review text. Useful for the business to see history /
 // catch bad-sentiment sessions before they ever reach Google.
 export const reviewSessions = pgTable("review_sessions", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -57,6 +59,6 @@ export const reviewSessions = pgTable("review_sessions", {
   questionIds: jsonb("question_ids").notNull().$type<string[]>(),
   answers: jsonb("answers").notNull().$type<Record<string, string>>(),
   draftText: text("draft_text"),
-  sentiment: text("sentiment"), // "positive" | "neutral" | "negative" (set by the AI)
+  sentiment: text("sentiment"), // "positive" | "neutral" | "negative"
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });

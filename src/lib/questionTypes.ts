@@ -12,7 +12,7 @@ export function needsOptions(type: QuestionType): boolean {
 }
 
 /**
- * Turns a raw answer value into a readable string for the AI drafting prompt
+ * Turns a raw answer value into a readable string for the review draft
  * and for display. Ratings come in as numbers (1-5); everything else is
  * already a string.
  */

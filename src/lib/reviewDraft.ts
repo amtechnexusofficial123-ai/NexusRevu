@@ -9,14 +9,26 @@ type DraftResult = {
  * Turns the customer's answers into a short review draft without any AI API.
  * Also estimates sentiment from star ratings when present.
  */
-export function draftReview(businessName: string, qas: QA[]): DraftResult {
+export function draftReview(
+  businessName: string,
+  qas: QA[],
+  context?: { category?: string | null; description?: string | null }
+): DraftResult {
   const sentences = qas
     .map((qa) => formatQaSentence(qa))
     .filter(Boolean);
 
   if (sentences.length === 0) {
+    const about = context?.description?.trim();
+    const category = context?.category?.trim();
+    let middle = "Friendly staff and a welcoming vibe";
+    if (about) {
+      middle = about.replace(/\.$/, "");
+    } else if (category) {
+      middle = `A solid ${category.toLowerCase()} spot`;
+    }
     return {
-      draftText: `Had a great time at ${businessName}. Friendly staff and a welcoming vibe. Would definitely come back.`,
+      draftText: `Had a great time at ${businessName}. ${middle}. Would definitely come back.`,
       sentiment: "positive",
     };
   }

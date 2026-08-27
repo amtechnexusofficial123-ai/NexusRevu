@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { businesses } from "@/db/schema";
 import { getSessionAdminId } from "@/lib/auth";
 import { normalizeLogoUrl } from "@/lib/logoValidation";
+import { normalizeBusinessDetails, validateBusinessDetails } from "@/lib/businessValidation";
 import { eq, and } from "drizzle-orm";
 
 async function loadOwned(id: string, adminId: string) {
@@ -32,7 +33,26 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const existing = await loadOwned(id, adminId);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const { name, address, logoUrl, googlePlaceId } = await req.json();
+  const { name, address, category, description, logoUrl, googlePlaceId } = await req.json();
+
+  const validationError = validateBusinessDetails({
+    name,
+    address,
+    category,
+    description,
+    googlePlaceId,
+  });
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
+  }
+
+  const details = normalizeBusinessDetails({
+    name,
+    address,
+    category,
+    description,
+    googlePlaceId,
+  });
 
   let normalizedLogo: string | null | undefined = undefined;
   if (logoUrl !== undefined) {
@@ -46,10 +66,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const [updated] = await db
     .update(businesses)
     .set({
-      ...(name !== undefined && { name }),
-      ...(address !== undefined && { address }),
+      name: details.name,
+      address: details.address,
+      category: details.category,
+      description: details.description,
       ...(normalizedLogo !== undefined && { logoUrl: normalizedLogo }),
-      ...(googlePlaceId !== undefined && { googlePlaceId }),
+      googlePlaceId: details.googlePlaceId,
     })
     .where(eq(businesses.id, id))
     .returning();

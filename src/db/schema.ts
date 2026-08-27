@@ -27,6 +27,8 @@ export const businesses = pgTable("businesses", {
   manageToken: text("manage_token").unique(),
   name: text("name").notNull(),
   address: text("address"),
+  category: text("category"),
+  description: text("description"),
   logoUrl: text("logo_url"), // stored externally (R2 / any image host), we just keep the URL
   googlePlaceId: text("google_place_id"), // needed to build the "write a review" deep link
   createdAt: timestamp("created_at").notNull().defaultNow(),

@@ -9,6 +9,8 @@ type Business = {
   id: string;
   name: string;
   address: string | null;
+  category: string | null;
+  description: string | null;
   logoUrl: string | null;
   googlePlaceId: string | null;
   slug: string;
@@ -33,6 +35,8 @@ export default function BusinessDetailPage({
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
+  const [category, setCategory] = useState("");
+  const [description, setDescription] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [googlePlaceId, setGooglePlaceId] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
@@ -54,6 +58,8 @@ export default function BusinessDetailPage({
         setBusiness(data.business);
         setName(data.business.name ?? "");
         setAddress(data.business.address ?? "");
+        setCategory(data.business.category ?? "");
+        setDescription(data.business.description ?? "");
         setLogoUrl(data.business.logoUrl ?? "");
         setGooglePlaceId(data.business.googlePlaceId ?? "");
         setLoading(false);
@@ -92,17 +98,15 @@ export default function BusinessDetailPage({
     e.preventDefault();
     setDetailsError(null);
     setDetailsMessage(null);
-    if (!name.trim()) {
-      setDetailsError("Business name is required");
-      return;
-    }
     setSavingDetails(true);
+
+    const payload = { name, address, category, description, logoUrl, googlePlaceId };
 
     if (isNew) {
       const res = await fetch("/api/businesses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, address, logoUrl, googlePlaceId }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       setSavingDetails(false);
@@ -118,7 +122,7 @@ export default function BusinessDetailPage({
     const res = await fetch(`/api/businesses/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, address, logoUrl, googlePlaceId }),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     setSavingDetails(false);
@@ -188,12 +192,36 @@ export default function BusinessDetailPage({
             <input className="input" value={name} onChange={(e) => setName(e.target.value)} required />
           </div>
           <div>
+            <label className="mb-1 block text-sm font-medium text-ink/80">Category</label>
+            <input
+              className="input"
+              placeholder="e.g. Bakery, cake shop"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink/80">Business description</label>
+            <textarea
+              className="input min-h-[100px]"
+              placeholder="What does this business do? e.g. Custom cakes, pastries, and coffee."
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              required
+            />
+            <p className="mt-1 text-xs text-ink/50">
+              A short summary of what they offer. Used when drafting reviews.
+            </p>
+          </div>
+          <div>
             <label className="mb-1 block text-sm font-medium text-ink/80">Address</label>
             <input
               className="input"
               placeholder="123 MG Road, Chennai"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
+              required
             />
           </div>
           <div>
@@ -252,6 +280,7 @@ export default function BusinessDetailPage({
               placeholder="ChIJ…"
               value={googlePlaceId}
               onChange={(e) => setGooglePlaceId(e.target.value)}
+              required
             />
             <p className="mt-1 text-xs text-ink/50">
               Find yours with Google&apos;s{" "}

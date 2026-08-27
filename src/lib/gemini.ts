@@ -94,8 +94,22 @@ export async function generateGeminiText(
   return text;
 }
 
+export type BusinessContext = {
+  name: string;
+  category?: string | null;
+  description?: string | null;
+};
+
+function formatBusinessContext(business: BusinessContext): string {
+  const category = business.category?.trim() || "not specified";
+  const description = business.description?.trim() || "not specified";
+  return `Business name: ${business.name}
+Category: ${category}
+About: ${description}`;
+}
+
 function buildNoAnswersPrompt(
-  businessName: string,
+  business: BusinessContext,
   variation: VariationBundle,
   recentDrafts: string[]
 ): string {
@@ -112,7 +126,9 @@ function buildNoAnswersPrompt(
       ? `\nRecent reviews at this business (do not reuse sentence patterns or distinctive phrases from these):\n${truncatedRecents.map((d, i) => `${i + 1}. "${d}"`).join("\n")}`
       : "";
 
-  return `You are drafting a Google review for "${businessName}". The customer did not answer any questions — write a short, genuine positive review based only on what a typical happy customer might say about this business name.
+  return `You are drafting a Google review for this business. The customer did not answer any questions — write a short, genuine positive review grounded in the business context below.
+
+${formatBusinessContext(business)}
 
 VARIATION FOR THIS DRAFT (follow these):
 - Target length: about ${variation.targetWords} words (not longer)
@@ -129,8 +145,9 @@ WRITE LIKE A REAL PERSON, NOT MARKETING:
 - Plain words — avoid "delightful", "exceptional", "hidden gem", "highly recommend", "must try", "absolutely", "perfect", "amazing experience"
 - Vary sentence length; short fragments are fine
 - Do not start with stiff openers like "I recently visited" or "I had the pleasure"
-- Keep it positive and believable — friendly staff, good atmosphere, would return
-- Do not invent specific menu items, staff names, or details you cannot infer from the business name alone
+- Keep it positive and believable — friendly staff, good experience, would return
+- Stay true to the category and description — do not mention meals, dinner, or restaurant vibes unless that fits this business
+- Do not invent specific menu items, staff names, or details beyond the context above
 - No emojis or hashtags
 
 Then classify overall sentiment as exactly one word: positive, neutral, or negative.
@@ -140,7 +157,7 @@ Respond ONLY with JSON in this exact shape, no markdown fences, no preamble:
 }
 
 function buildReviewPrompt(
-  businessName: string,
+  business: BusinessContext,
   qas: QA[],
   variation: VariationBundle,
   recentDrafts: string[]
@@ -158,7 +175,9 @@ function buildReviewPrompt(
       ? `\nRecent reviews at this business (do not reuse sentence patterns or distinctive phrases from these):\n${truncatedRecents.map((d, i) => `${i + 1}. "${d}"`).join("\n")}`
       : "";
 
-  return `You are drafting a Google review for "${businessName}" from a real customer's quick answers.
+  return `You are drafting a Google review for this business from a real customer's quick answers.
+
+${formatBusinessContext(business)}
 
 CUSTOMER ANSWERS:
 ${qas.map((qa, i) => `${i + 1}. Q: ${qa.question}\n   A: ${qa.answer}`).join("\n")}
@@ -180,7 +199,8 @@ WRITE LIKE A REAL PERSON, NOT MARKETING:
 - Vary sentence length; short fragments are fine
 - Do not start with stiff openers like "I recently visited" or "I had the pleasure"
 - Match tone honestly to star ratings in the answers
-- Only use facts from the answers — do not invent menu items, staff names, or details
+- Always stay true to the business category and description above — do not mention meals, dinner, or restaurant vibes unless that fits this business
+- Only use facts from the answers and business context — do not invent menu items, staff names, or details
 - No emojis or hashtags unless the customer's vibe clearly suggests it
 
 Then classify overall sentiment as exactly one word: positive, neutral, or negative.
@@ -205,15 +225,15 @@ function parseDraftJson(text: string): GeminiDraftResult {
 }
 
 async function generateOnce(
-  businessName: string,
+  business: BusinessContext,
   qas: QA[],
   variation: VariationBundle,
   recentDrafts: string[]
 ): Promise<GeminiDraftResult> {
   const hasAnswers = qas.some((qa) => qa.answer.trim());
   const prompt = hasAnswers
-    ? buildReviewPrompt(businessName, qas, variation, recentDrafts)
-    : buildNoAnswersPrompt(businessName, variation, recentDrafts);
+    ? buildReviewPrompt(business, qas, variation, recentDrafts)
+    : buildNoAnswersPrompt(business, variation, recentDrafts);
   const text = await generateGeminiText(prompt, {
     json: true,
     maxOutputTokens: 2448,
@@ -226,16 +246,16 @@ async function generateOnce(
  * Gemini kiosk-style review draft with random variation and anti-repetition retry.
  */
 export async function draftReviewWithGemini(
-  businessName: string,
+  business: BusinessContext,
   qas: QA[],
   recentDrafts: string[] = []
 ): Promise<GeminiDraftResult> {
   const variation = pickVariation(qas);
-  let result = await generateOnce(businessName, qas, variation, recentDrafts);
+  let result = await generateOnce(business, qas, variation, recentDrafts);
 
   if (recentDrafts.length > 0 && draftTooSimilar(result.draftText, recentDrafts)) {
     const retryVariation = pickVariationRetry(qas, variation);
-    result = await generateOnce(businessName, qas, retryVariation, recentDrafts);
+    result = await generateOnce(business, qas, retryVariation, recentDrafts);
   }
 
   return result;

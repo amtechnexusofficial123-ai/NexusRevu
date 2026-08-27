@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { businesses } from "@/db/schema";
 import { getSessionAdminId } from "@/lib/auth";
 import { normalizeLogoUrl } from "@/lib/logoValidation";
+import { normalizeBusinessDetails, validateBusinessDetails } from "@/lib/businessValidation";
 import { nanoid } from "nanoid";
 import { eq, desc } from "drizzle-orm";
 
@@ -33,10 +34,25 @@ export async function POST(req: NextRequest) {
   const adminId = await getSessionAdminId();
   if (!adminId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { name, address, logoUrl, googlePlaceId } = await req.json();
-  if (!name?.trim()) {
-    return NextResponse.json({ error: "Business name is required" }, { status: 400 });
+  const { name, address, category, description, logoUrl, googlePlaceId } = await req.json();
+  const validationError = validateBusinessDetails({
+    name,
+    address,
+    category,
+    description,
+    googlePlaceId,
+  });
+  if (validationError) {
+    return NextResponse.json({ error: validationError }, { status: 400 });
   }
+
+  const details = normalizeBusinessDetails({
+    name,
+    address,
+    category,
+    description,
+    googlePlaceId,
+  });
 
   const logo = normalizeLogoUrl(logoUrl ?? null);
   if (logo && typeof logo === "object" && "error" in logo) {
@@ -50,10 +66,12 @@ export async function POST(req: NextRequest) {
     .insert(businesses)
     .values({
       adminId,
-      name: name.trim(),
-      address: address?.trim() || null,
+      name: details.name,
+      address: details.address,
+      category: details.category,
+      description: details.description,
       logoUrl: logo,
-      googlePlaceId: googlePlaceId?.trim() || null,
+      googlePlaceId: details.googlePlaceId,
       slug,
       manageToken,
     })

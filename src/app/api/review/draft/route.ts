@@ -44,11 +44,22 @@ export async function POST(req: NextRequest) {
       .map((r) => r.draftText)
       .filter((t): t is string => Boolean(t?.trim()));
 
-    const result = await draftReviewWithGemini(business.name, formatted, recentDrafts);
+    const result = await draftReviewWithGemini(
+      {
+        name: business.name,
+        category: business.category,
+        description: business.description,
+      },
+      formatted,
+      recentDrafts
+    );
     draftText = result.draftText;
     sentiment = result.sentiment;
   } else {
-    const result = draftReview(business.name, formatted);
+    const result = draftReview(business.name, formatted, {
+      category: business.category,
+      description: business.description,
+    });
     draftText = result.draftText;
     sentiment = result.sentiment;
   }

@@ -2,13 +2,29 @@ import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import * as schema from "./schema";
 
-const databaseUrl = process.env.DATABASE_URL;
+type Db = ReturnType<typeof drizzle<typeof schema>>;
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL environment variable is not set");
+let _db: Db | undefined;
+
+/**
+ * Lazy so `next build` / OpenNext can collect page data without DATABASE_URL
+ * being present at build time. Cloudflare only needs the var at runtime.
+ */
+function getDb(): Db {
+  if (_db) return _db;
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    throw new Error("DATABASE_URL environment variable is not set");
+  }
+  // Neon's HTTP driver works on Cloudflare Workers (no TCP sockets).
+  _db = drizzle(neon(databaseUrl), { schema });
+  return _db;
 }
 
-// Uses Neon's HTTP driver so this works in Cloudflare's edge runtime
-const sql = neon(databaseUrl);
-
-export const db = drizzle(sql, { schema });
+export const db = new Proxy({} as Db, {
+  get(_target, prop, _receiver) {
+    const instance = getDb();
+    const value = Reflect.get(instance, prop, instance);
+    return typeof value === "function" ? value.bind(instance) : value;
+  },
+});

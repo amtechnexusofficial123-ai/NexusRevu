@@ -14,6 +14,13 @@ export function draftReview(businessName: string, qas: QA[]): DraftResult {
     .map((qa) => formatQaSentence(qa))
     .filter(Boolean);
 
+  if (sentences.length === 0) {
+    return {
+      draftText: `Had a great time at ${businessName}. Friendly staff and a welcoming vibe. Would definitely come back.`,
+      sentiment: "positive",
+    };
+  }
+
   const draftText = [
     `I visited ${businessName}.`,
     ...sentences,

@@ -36,11 +36,6 @@ export default function CustomerReviewPage({
       });
   }, [slug]);
 
-  const allAnswered = questions.every((q) => {
-    const v = answers[q.id];
-    return v !== undefined && v !== "";
-  });
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStep("drafting");
@@ -68,7 +63,7 @@ export default function CustomerReviewPage({
     setStep("done");
   }
 
-  async function handleCopyAndContinue() {
+  async function handlePost() {
     try {
       await navigator.clipboard.writeText(draft);
       setCopied(true);
@@ -88,7 +83,7 @@ export default function CustomerReviewPage({
           <img src={business.logoUrl} alt={business.name} className="mb-3 h-14 w-14 rounded-full object-cover" />
         )}
         <h1 className="font-display text-2xl text-ink">{business?.name}</h1>
-        <p className="mt-1 text-sm text-ink/60">A few quick questions, then you're done.</p>
+        <p className="mt-1 text-sm text-ink/60">Thank you for reviewing — this helps us grow.</p>
       </div>
 
       {(step === "answering" || step === "drafting") && (
@@ -105,7 +100,7 @@ export default function CustomerReviewPage({
               />
             </div>
           ))}
-          <button className="btn-primary" disabled={step === "drafting" || !allAnswered}>
+          <button className="btn-primary" disabled={step === "drafting"}>
             {step === "drafting" ? "Writing your review…" : "Continue"}
           </button>
         </form>
@@ -116,15 +111,9 @@ export default function CustomerReviewPage({
           <p className="text-sm font-medium text-ink/80">Here's your review:</p>
           <p className="rounded-card bg-brand-light p-4 text-sm text-ink">{draft}</p>
           {googleUrl ? (
-            <>
-              <button onClick={handleCopyAndContinue} className="btn-primary">
-                {copied ? "Copied — opening Google…" : "Copy & post on Google"}
-              </button>
-              <p className="text-center text-xs text-ink/50">
-                We'll copy this text and open Google's review page for you —
-                just paste it in and submit.
-              </p>
-            </>
+            <button onClick={handlePost} className="btn-primary">
+              {copied ? "Opening Google…" : "Post"}
+            </button>
           ) : (
             <p className="text-center text-xs text-ink/50">
               This business hasn't connected their Google listing yet. Feel free to copy
@@ -134,7 +123,17 @@ export default function CustomerReviewPage({
         </div>
       )}
 
-      <p className="mt-8 text-center text-[11px] text-ink/30">NexusRevu, by AM Technexus Labs</p>
+      <p className="mt-8 text-center text-[11px] text-ink/30">
+        Powered by{" "}
+        <a
+          href="https://www.amtechnexus.com/"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-ink/45 underline-offset-2 hover:text-ink/60 hover:underline"
+        >
+          AM TechNexus Labs
+        </a>
+      </p>
     </main>
   );
 }
@@ -215,7 +214,6 @@ function QuestionInput({
   return (
     <textarea
       className="input min-h-[80px]"
-      required
       value={(value as string) ?? ""}
       onChange={(e) => onChange(e.target.value)}
     />

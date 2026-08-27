@@ -35,7 +35,10 @@ function pickRandom<T>(items: readonly T[]): T {
 
 export function pickVariation(qas: QA[]): VariationBundle {
   const nonEmpty = qas.filter((qa) => qa.answer.trim());
-  const leadQa = nonEmpty.length > 0 ? pickRandom(nonEmpty) : qas[0];
+  const leadQa =
+    nonEmpty.length > 0
+      ? pickRandom(nonEmpty)
+      : { question: "overall experience", answer: "positive visit" };
 
   return {
     targetWords: pickRandom(TARGET_LENGTHS),

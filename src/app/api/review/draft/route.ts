@@ -15,17 +15,19 @@ type Body = {
 export async function POST(req: NextRequest) {
   const { slug, answers }: Body = await req.json();
 
-  if (!slug || !answers?.length) {
+  if (!slug || !Array.isArray(answers)) {
     return NextResponse.json({ error: "slug and answers are required" }, { status: 400 });
   }
 
   const [business] = await db.select().from(businesses).where(eq(businesses.slug, slug));
   if (!business) return NextResponse.json({ error: "Business not found" }, { status: 404 });
 
-  const formatted = answers.map((a) => ({
-    question: a.question,
-    answer: formatAnswerForDisplay(a.type ?? "text", a.answer),
-  }));
+  const formatted = answers
+    .map((a) => ({
+      question: a.question,
+      answer: formatAnswerForDisplay(a.type ?? "text", a.answer),
+    }))
+    .filter((qa) => qa.answer.trim());
 
   let draftText: string;
   let sentiment: string;
@@ -54,7 +56,14 @@ export async function POST(req: NextRequest) {
   await db.insert(reviewSessions).values({
     businessId: business.id,
     questionIds: answers.map((a) => a.questionId),
-    answers: Object.fromEntries(answers.map((a, i) => [a.questionId, formatted[i].answer])),
+    answers: Object.fromEntries(
+      answers
+        .map((a, i) => {
+          const display = formatAnswerForDisplay(a.type ?? "text", a.answer);
+          return display.trim() ? [a.questionId, display] : null;
+        })
+        .filter((e): e is [string, string] => e !== null)
+    ),
     draftText,
     sentiment,
   });

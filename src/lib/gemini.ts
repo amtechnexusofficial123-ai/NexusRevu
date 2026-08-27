@@ -94,6 +94,51 @@ export async function generateGeminiText(
   return text;
 }
 
+function buildNoAnswersPrompt(
+  businessName: string,
+  variation: VariationBundle,
+  recentDrafts: string[]
+): string {
+  const openings = recentOpenings(recentDrafts);
+  const truncatedRecents = recentDrafts.map((d) => truncateDraft(d));
+
+  const openingBan =
+    openings.length > 0
+      ? `\nHARD RULE — do NOT reuse or closely mimic these recent opening lines:\n${openings.map((o) => `- "${o}"`).join("\n")}`
+      : "";
+
+  const patternBan =
+    truncatedRecents.length > 0
+      ? `\nRecent reviews at this business (do not reuse sentence patterns or distinctive phrases from these):\n${truncatedRecents.map((d, i) => `${i + 1}. "${d}"`).join("\n")}`
+      : "";
+
+  return `You are drafting a Google review for "${businessName}". The customer did not answer any questions — write a short, genuine positive review based only on what a typical happy customer might say about this business name.
+
+VARIATION FOR THIS DRAFT (follow these):
+- Target length: about ${variation.targetWords} words (not longer)
+- Structure: ${variation.structureSeed}
+- Voice: ${variation.voiceSeed}
+${openingBan}
+${patternBan}
+
+WRITE LIKE A REAL PERSON, NOT MARKETING:
+- First person, conversational
+- Use contractions ("don't", "it's", "we'd")
+- No em dashes or en dashes; no hyphenated compounds (write "well behaved" not "well-behaved")
+- No semicolons or colons; simple punctuation only
+- Plain words — avoid "delightful", "exceptional", "hidden gem", "highly recommend", "must try", "absolutely", "perfect", "amazing experience"
+- Vary sentence length; short fragments are fine
+- Do not start with stiff openers like "I recently visited" or "I had the pleasure"
+- Keep it positive and believable — friendly staff, good atmosphere, would return
+- Do not invent specific menu items, staff names, or details you cannot infer from the business name alone
+- No emojis or hashtags
+
+Then classify overall sentiment as exactly one word: positive, neutral, or negative.
+
+Respond ONLY with JSON in this exact shape, no markdown fences, no preamble:
+{"draftText": "...", "sentiment": "positive"}`;
+}
+
 function buildReviewPrompt(
   businessName: string,
   qas: QA[],
@@ -165,7 +210,10 @@ async function generateOnce(
   variation: VariationBundle,
   recentDrafts: string[]
 ): Promise<GeminiDraftResult> {
-  const prompt = buildReviewPrompt(businessName, qas, variation, recentDrafts);
+  const hasAnswers = qas.some((qa) => qa.answer.trim());
+  const prompt = hasAnswers
+    ? buildReviewPrompt(businessName, qas, variation, recentDrafts)
+    : buildNoAnswersPrompt(businessName, variation, recentDrafts);
   const text = await generateGeminiText(prompt, {
     json: true,
     maxOutputTokens: 2448,

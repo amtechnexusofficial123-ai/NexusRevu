@@ -83,7 +83,7 @@ export default function CustomerReviewPage({
           <img src={business.logoUrl} alt={business.name} className="mb-3 h-14 w-14 rounded-full object-cover" />
         )}
         <h1 className="font-display text-2xl text-ink">{business?.name}</h1>
-        <p className="mt-1 text-sm text-ink/60">Thank you for reviewing — this helps us grow.</p>
+        <p className="mt-1 text-sm text-ink/60">Thank you for reviewing, this helps us grow.</p>
       </div>
 
       {(step === "answering" || step === "drafting") && (
@@ -108,12 +108,29 @@ export default function CustomerReviewPage({
 
       {step === "done" && (
         <div className="card flex flex-col gap-4">
-          <p className="text-sm font-medium text-ink/80">Here's your review:</p>
+          {copied ? (
+            <div className="rounded-card border border-brand/25 bg-brand-light/80 px-4 py-3 text-center">
+              <p className="font-medium text-ink">Your review is copied!</p>
+              <p className="mt-1 text-sm text-ink/70">
+                Paste it into the Google review box and submit. That&apos;s all, thank you!
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm font-medium text-ink/80">Here&apos;s your review:</p>
+          )}
           <p className="rounded-card bg-brand-light p-4 text-sm text-ink">{draft}</p>
           {googleUrl ? (
-            <button onClick={handlePost} className="btn-primary">
-              {copied ? "Opening Google…" : "Post"}
-            </button>
+            copied ? (
+              <button
+                type="button"
+                onClick={() => window.open(googleUrl, "_blank")}
+                className="text-center text-sm font-medium text-brand underline decoration-brand/50 underline-offset-2 hover:decoration-brand"
+              >
+                Open Google again
+              </button>
+            ) : (
+              <button onClick={handlePost} className="btn-primary">Post</button>
+            )
           ) : (
             <p className="text-center text-xs text-ink/50">
               This business hasn't connected their Google listing yet. Feel free to copy
@@ -123,13 +140,13 @@ export default function CustomerReviewPage({
         </div>
       )}
 
-      <p className="mt-8 text-center text-[11px] text-ink/30">
+      <p className="mt-8 text-center text-[11px] text-ink/40">
         Powered by{" "}
         <a
           href="https://www.amtechnexus.com/"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-ink/45 underline-offset-2 hover:text-ink/60 hover:underline"
+          className="font-medium text-brand underline decoration-brand/50 underline-offset-2 hover:decoration-brand"
         >
           AM TechNexus Labs
         </a>

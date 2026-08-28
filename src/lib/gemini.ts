@@ -161,6 +161,87 @@ CONTEXT USAGE (important):
 - Do not read the description like a menu or feature list.
 - Vary what you highlight across reviews (a product, service, atmosphere, staff, or would come back).`;
 
+const BANNED_OPENERS = [
+  "I recently visited",
+  "I had the pleasure",
+  "I had a great experience",
+  "We recently visited",
+  "My family and I",
+  "If you're looking for",
+  "Look no further",
+  "From the moment we walked in",
+  "From start to finish",
+  "I cannot recommend",
+  "I can't recommend enough",
+  "Nestled in",
+  "A must try",
+  "A must-visit",
+  "Stopped by this place",
+  "Tried this place out",
+  "Visited this place",
+] as const;
+
+const BANNED_PHRASES = [
+  "hidden gem",
+  "highly recommend",
+  "highly recommended",
+  "must try",
+  "must visit",
+  "must-try",
+  "absolutely loved",
+  "amazing experience",
+  "exceptional service",
+  "exceptional",
+  "delightful",
+  "five stars",
+  "top notch",
+  "top-notch",
+  "went above and beyond",
+  "above and beyond",
+  "don't hesitate",
+  "you won't be disappointed",
+  "gem of a place",
+  "can't wait to go back",
+  "will definitely be back",
+  "exceeded expectations",
+  "perfect experience",
+  "truly wonderful",
+  "hands down",
+  "cannot say enough",
+  "can't say enough",
+  "overall experience",
+  "atmosphere was",
+  "second to none",
+] as const;
+
+const BANNED_LANGUAGE_RULES = `
+HARD RULE — do NOT open with these (or close variants):
+${BANNED_OPENERS.map((o) => `- "${o}"`).join("\n")}
+
+HARD RULE — do NOT use these words or phrases anywhere in the review:
+${BANNED_PHRASES.map((p) => `- "${p}"`).join("\n")}
+
+Prefer one plain specific detail from the answers over praise clichés.`;
+
+const WRITE_LIKE_RULES = `
+WRITE LIKE A REAL PERSON, NOT MARKETING:
+- First person, conversational — like a quick note, not an essay
+- Use contractions ("don't", "it's", "we'd")
+- No em dashes or en dashes; no hyphenated compounds (write "well behaved" not "well-behaved")
+- No semicolons or colons; simple punctuation only
+- Vary sentence length; short fragments are fine
+- Sound understated when ratings are good — "pretty good", "glad we came" beats gushing
+- Only use facts from the answers and business context — do not invent menu items, staff names, or details
+- No emojis or hashtags`;
+
+function formatBannedLanguageRules(): string {
+  return BANNED_LANGUAGE_RULES;
+}
+
+function formatWriteRules(extraBullets: string[]): string {
+  return `${WRITE_LIKE_RULES}\n${extraBullets.map((b) => `- ${b}`).join("\n")}`;
+}
+
 function limitRecents(recentDrafts: string[]): string[] {
   return recentDrafts.slice(0, MAX_RECENT_IN_PROMPT);
 }
@@ -238,19 +319,12 @@ VARIATION FOR THIS DRAFT (follow these):
 ${formatVariationBlock(variation, true)}
 ${formatRepetitionGuards(recentDrafts)}
 ${SELECTIVE_CONTEXT_RULES}
-
-WRITE LIKE A REAL PERSON, NOT MARKETING:
-- First person, conversational
-- Use contractions ("don't", "it's", "we'd")
-- No em dashes or en dashes; no hyphenated compounds (write "well behaved" not "well-behaved")
-- No semicolons or colons; simple punctuation only
-- Plain words — avoid "delightful", "exceptional", "hidden gem", "highly recommend", "must try", "absolutely", "perfect", "amazing experience"
-- Vary sentence length; short fragments are fine
-- Do not start with stiff openers like "I recently visited" or "I had the pleasure"
-- Keep it positive and believable — friendly staff, good experience, would return
-- Stay true to the category and description — do not mention meals, dinner, or restaurant vibes unless that fits this business
-- Do not invent specific menu items, staff names, or details beyond the context above
-- No emojis or hashtags
+${formatBannedLanguageRules()}
+${formatWriteRules([
+  "Keep it positive and believable — friendly staff, good experience, would return",
+  "Stay true to the category and description — do not mention meals, dinner, or restaurant vibes unless that fits this business",
+  "Do not invent specific menu items, staff names, or details beyond the context above",
+])}
 
 Then classify overall sentiment as exactly one word: positive, neutral, or negative.
 
@@ -275,19 +349,12 @@ VARIATION FOR THIS DRAFT (follow these — customer did not choose them):
 ${formatVariationBlock(variation, false)}
 ${formatRepetitionGuards(recentDrafts)}
 ${SELECTIVE_CONTEXT_RULES}
-
-WRITE LIKE A REAL PERSON, NOT MARKETING:
-- First person, conversational
-- Use contractions ("don't", "it's", "we'd")
-- No em dashes or en dashes; no hyphenated compounds (write "well behaved" not "well-behaved")
-- No semicolons or colons; simple punctuation only
-- Plain words — avoid "delightful", "exceptional", "hidden gem", "highly recommend", "must try", "absolutely", "perfect", "amazing experience"
-- Vary sentence length; short fragments are fine
-- Do not start with stiff openers like "I recently visited" or "I had the pleasure"
-- Match tone honestly to star ratings in the answers
-- Always stay true to the business category and description above — do not mention meals, dinner, or restaurant vibes unless that fits this business
-- Only use facts from the answers and business context — do not invent menu items, staff names, or details
-- No emojis or hashtags unless the customer's vibe clearly suggests it
+${formatBannedLanguageRules()}
+${formatWriteRules([
+  "Match tone honestly to star ratings in the answers",
+  "Always stay true to the business category and description above — do not mention meals, dinner, or restaurant vibes unless that fits this business",
+  "No emojis or hashtags unless the customer's vibe clearly suggests it",
+])}
 
 Then classify overall sentiment as exactly one word: positive, neutral, or negative.
 

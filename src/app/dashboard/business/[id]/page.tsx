@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { fileToLogoDataUrl } from "@/lib/logoUpload";
-import { downloadQrImage } from "@/lib/qrDownload";
+import { downloadQrImage, downloadQuestionsQrImage, buildQrDownloadFilename } from "@/lib/qrDownload";
 import { themesToText } from "@/lib/reviewThemes";
 import { QrFlyerPreview } from "@/components/QrFlyerPreview";
+import { QuestionsQrPreview } from "@/components/QuestionsQrPreview";
 
 type Business = {
   id: string;
@@ -53,6 +54,7 @@ export default function BusinessDetailPage({
   const [manageQrDataUrl, setManageQrDataUrl] = useState<string | null>(null);
   const [manageUrl, setManageUrl] = useState<string | null>(null);
   const [downloadingReviewQr, setDownloadingReviewQr] = useState(false);
+  const [downloadingQuestionsQr, setDownloadingQuestionsQr] = useState(false);
 
   useEffect(() => {
     if (isNew) return;
@@ -153,13 +155,32 @@ export default function BusinessDetailPage({
     try {
       await downloadQrImage(
         reviewQrDataUrl,
-        `${business.slug}-review-qr.png`,
+        buildQrDownloadFilename(business?.name ?? name, "CustomerQR"),
         { businessName: business?.name ?? name, logoUrl: business?.logoUrl ?? logoUrl }
       );
     } catch {
       setDetailsError("Could not download QR image");
     } finally {
       setDownloadingReviewQr(false);
+    }
+  }
+
+  async function handleDownloadQuestionsQr() {
+    if (!manageQrDataUrl || !business) return;
+    setDownloadingQuestionsQr(true);
+    try {
+      await downloadQuestionsQrImage(
+        manageQrDataUrl,
+        buildQrDownloadFilename(business?.name ?? name, "QuestionsQR"),
+        {
+          businessName: business?.name ?? name,
+          logoUrl: business?.logoUrl ?? logoUrl,
+        }
+      );
+    } catch {
+      setDetailsError("Could not download QR image");
+    } finally {
+      setDownloadingQuestionsQr(false);
     }
   }
 
@@ -333,30 +354,27 @@ export default function BusinessDetailPage({
         <div className="card flex flex-col items-center gap-4 text-center">
           <h2 className="font-display text-lg text-ink">Questions QR</h2>
           <p className="max-w-md text-sm text-ink/60">
-            Business staff scan this to view and update questions on their phone.
+            Staff scan this to add or edit review questions on their phone.
             {questionCount === 0
               ? " No questions yet — scanning lets them add the first one."
               : ` Currently ${questionCount} question${questionCount === 1 ? "" : "s"} saved.`}
           </p>
-          {manageQrDataUrl ? (
-            <img
-              src={manageQrDataUrl}
-              alt="Manage questions QR code"
-              className="h-44 w-44 rounded-card border border-ink/10"
-            />
-          ) : (
-            <p className="text-ink/50">Generating…</p>
-          )}
+          <QuestionsQrPreview
+            qrDataUrl={manageQrDataUrl}
+            businessName={business?.name ?? name}
+            logoUrl={business?.logoUrl ?? logoUrl}
+          />
           {manageUrl && <p className="break-all text-xs text-ink/50">{manageUrl}</p>}
           <div className="flex flex-wrap justify-center gap-3">
             {manageQrDataUrl && (
-              <a
-                href={manageQrDataUrl}
-                download={`${business?.slug}-questions-qr.png`}
+              <button
+                type="button"
+                onClick={handleDownloadQuestionsQr}
+                disabled={downloadingQuestionsQr}
                 className="btn-secondary"
               >
-                Download QR
-              </a>
+                {downloadingQuestionsQr ? "Preparing…" : "Download QR"}
+              </button>
             )}
             {manageUrl && (
               <a href={manageUrl} target="_blank" rel="noreferrer" className="btn-secondary">

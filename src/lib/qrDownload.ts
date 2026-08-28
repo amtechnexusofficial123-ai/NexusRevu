@@ -13,6 +13,25 @@ export type QrFlyerOptions = {
   logoUrl?: string | null;
 };
 
+export type QuestionsQrOptions = {
+  logoUrl?: string | null;
+  businessName?: string;
+};
+
+/** Safe download name: e.g. SweetCrumbsBakery_CustomerQR.png */
+export function buildQrDownloadFilename(
+  businessName: string,
+  variant: "CustomerQR" | "QuestionsQR"
+): string {
+  const safe =
+    businessName
+      .trim()
+      .replace(/[/\\?%*:|"<>]/g, "")
+      .replace(/\s+/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "") || "Business";
+  return `${safe}_${variant}.png`;
+}
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -319,6 +338,137 @@ export async function downloadQrImage(
   options?: QrFlyerOptions | string | null
 ) {
   const canvas = await renderQrFlyerCanvas(qrDataUrl, options);
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+  if (!blob) throw new Error("Could not create image");
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename.endsWith(".png") ? filename : `${filename}.png`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function drawLogoPlaceholder(
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  y: number,
+  size: number,
+  businessName: string
+) {
+  ctx.fillStyle = "#F3E8F5";
+  ctx.beginPath();
+  ctx.arc(centerX, y + size / 2, size / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = CTA_BLUE;
+  ctx.font = `600 ${size * 0.42}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText((businessName || "?").charAt(0).toUpperCase(), centerX, y + size / 2);
+}
+
+/** Renders the staff questions QR card: logo, scan line, framed QR. */
+export async function renderQuestionsQrCanvas(
+  qrDataUrl: string,
+  options?: QuestionsQrOptions
+): Promise<HTMLCanvasElement> {
+  const businessName = options?.businessName?.trim() || "Business";
+  const qr = await loadImage(qrDataUrl);
+
+  let logo: HTMLImageElement | null = null;
+  const trimmedLogo = options?.logoUrl?.trim();
+  if (trimmedLogo) {
+    try {
+      logo = await loadImage(trimmedLogo);
+    } catch {
+      logo = null;
+    }
+  }
+
+  const CARD_W = 420;
+  const OUTER_BORDER = 10;
+  const PAD = 28;
+  const INNER_W = CARD_W - OUTER_BORDER * 2 - PAD * 2;
+  const QR_SIZE = Math.min(260, INNER_W - 16);
+  const BORDER_R = 22;
+  const QR_BORDER = 6;
+  const QR_FRAME_R = 14;
+  const PLACEHOLDER_SIZE = 64;
+
+  const logoMaxW = INNER_W * 0.72;
+  const logoMaxH = 88;
+  const logoDims =
+    logo !== null
+      ? fitLogoDimensions(logo.naturalWidth, logo.naturalHeight, logoMaxW, logoMaxH)
+      : { width: 0, height: 0 };
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Could not create image");
+
+  let contentH = PAD;
+  if (logo) contentH += logoDims.height + 20;
+  else contentH += PLACEHOLDER_SIZE + 20;
+  contentH += 20 + 28 + QR_SIZE + QR_BORDER * 2 + PAD;
+
+  canvas.width = CARD_W;
+  canvas.height = contentH + OUTER_BORDER * 2;
+
+  const innerX = OUTER_BORDER;
+  const innerY = OUTER_BORDER;
+  const innerW = CARD_W - OUTER_BORDER * 2;
+  const innerH = canvas.height - OUTER_BORDER * 2;
+  const centerX = CARD_W / 2;
+
+  ctx.fillStyle = BG;
+  roundRectPath(ctx, innerX, innerY, innerW, innerH, BORDER_R);
+  ctx.fill();
+  drawGoogleRoundedBorder(ctx, innerX, innerY, innerW, innerH, BORDER_R, OUTER_BORDER);
+
+  let y = innerY + PAD;
+
+  if (logo) {
+    ctx.drawImage(logo, centerX - logoDims.width / 2, y, logoDims.width, logoDims.height);
+    y += logoDims.height + 20;
+  } else {
+    drawLogoPlaceholder(ctx, centerX, y, PLACEHOLDER_SIZE, businessName);
+    y += PLACEHOLDER_SIZE + 20;
+  }
+
+  ctx.fillStyle = INK;
+  ctx.font = `600 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillText("Scan this to upload questions", centerX, y);
+  y += 28;
+
+  const qrFrameW = QR_SIZE + QR_BORDER * 2;
+  const qrFrameX = centerX - qrFrameW / 2;
+  const qrFrameY = y;
+
+  ctx.fillStyle = BG;
+  roundRectPath(ctx, qrFrameX, qrFrameY, qrFrameW, qrFrameW, QR_FRAME_R);
+  ctx.fill();
+  drawGoogleRoundedBorder(ctx, qrFrameX, qrFrameY, qrFrameW, qrFrameW, QR_FRAME_R, QR_BORDER);
+  ctx.drawImage(qr, qrFrameX + QR_BORDER, qrFrameY + QR_BORDER, QR_SIZE, QR_SIZE);
+
+  return canvas;
+}
+
+export async function generateQuestionsQrDataUrl(
+  qrDataUrl: string,
+  options?: QuestionsQrOptions
+): Promise<string> {
+  const canvas = await renderQuestionsQrCanvas(qrDataUrl, options);
+  return canvas.toDataURL("image/png");
+}
+
+export async function downloadQuestionsQrImage(
+  qrDataUrl: string,
+  filename: string,
+  options?: QuestionsQrOptions
+) {
+  const canvas = await renderQuestionsQrCanvas(qrDataUrl, options);
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
   if (!blob) throw new Error("Could not create image");
 

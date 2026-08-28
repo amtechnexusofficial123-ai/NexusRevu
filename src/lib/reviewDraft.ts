@@ -79,10 +79,10 @@ function estimateSentiment(qas: QA[]): DraftResult["sentiment"] {
   return "neutral";
 }
 
-/** How many questions to show: 3 or 4 when the pool is large enough. */
+/** How many questions to show: all if ≤3 in pool, otherwise always 3 random. */
 export function pickQuestionCount(poolSize: number): number {
   if (poolSize <= 3) return poolSize;
-  return 3 + Math.floor(Math.random() * 2);
+  return 3;
 }
 
 /** Picks random questions out of the business's active question pool. */

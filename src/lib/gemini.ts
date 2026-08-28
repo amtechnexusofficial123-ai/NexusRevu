@@ -23,7 +23,12 @@ const GEMINI_TIMEOUT_MS = 22000;
 /** Enough for anti-repetition without bloating the prompt. */
 const MAX_RECENT_IN_PROMPT = 5;
 const PATTERN_TRUNCATE = 200;
-const DRAFT_OUTPUT_TOKENS = 384;
+
+function outputTokenLimit(model: string, requested?: number): number {
+  if (requested) return requested;
+  // Thinking models spend part of the budget on internal reasoning tokens.
+  return isGemini3Model(model) ? 2048 : 512;
+}
 
 function fetchWithTimeout(
   url: string,
@@ -77,7 +82,7 @@ export async function generateGeminiText(
 
   const generationConfig: Record<string, unknown> = {
     temperature: options?.temperature ?? 1,
-    maxOutputTokens: options?.maxOutputTokens ?? DRAFT_OUTPUT_TOKENS,
+    maxOutputTokens: outputTokenLimit(model, options?.maxOutputTokens),
   };
   if (options?.json) {
     generationConfig.responseMimeType = "application/json";
@@ -103,14 +108,42 @@ export async function generateGeminiText(
   }
 
   const data = await res.json();
-  const text = (data.candidates ?? [])
-    .flatMap((c: { content?: { parts?: { text?: string }[] } }) => c.content?.parts ?? [])
-    .map((p: { text?: string }) => p.text ?? "")
-    .join("")
+  const text = extractAnswerText(data);
+
+  if (!text) {
+    const finishReason = (data.candidates?.[0] as { finishReason?: string } | undefined)?.finishReason;
+    throw new Error(
+      `Gemini returned an empty response${finishReason ? ` (finishReason: ${finishReason})` : ""}`
+    );
+  }
+  return text;
+}
+
+type GeminiPart = { text?: string; thought?: boolean };
+
+function extractAnswerText(data: {
+  candidates?: Array<{ content?: { parts?: GeminiPart[] }; finishReason?: string }>;
+}): string {
+  const parts =
+    data.candidates?.flatMap((c) => c.content?.parts ?? []) ?? [];
+
+  const answerParts = parts
+    .filter((p) => p.text && !p.thought)
+    .map((p) => p.text ?? "");
+
+  if (answerParts.length > 0) {
+    return answerParts.join("").trim();
+  }
+
+  // Some models embed reasoning in normal text parts without part.thought.
+  const raw = parts.map((p) => p.text ?? "").join("").trim();
+  if (!raw) return "";
+
+  const withoutThoughtBlock = raw
+    .replace(/^THOUGHT:\s*[\s\S]*?(?=\n\s*(?:Answer:|{"draftText")|$)/i, "")
     .trim();
 
-  if (!text) throw new Error("Gemini returned an empty response");
-  return text;
+  return withoutThoughtBlock || raw;
 }
 
 export type BusinessContext = {
@@ -287,7 +320,6 @@ async function generateOnce(
     : buildNoAnswersPrompt(business, variation, recentDrafts);
   const text = await generateGeminiText(prompt, {
     json: true,
-    maxOutputTokens: DRAFT_OUTPUT_TOKENS,
     temperature: 1,
   });
   return parseDraftJson(text);

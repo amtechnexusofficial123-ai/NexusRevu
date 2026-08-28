@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse, after } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { businesses, reviewSessions } from "@/db/schema";
 import { draftReviewWithGemini, isGeminiConfigured } from "@/lib/gemini";
@@ -75,11 +75,17 @@ export async function POST(req: NextRequest) {
       .map((r) => r.draftText)
       .filter((t): t is string => Boolean(t?.trim()));
 
-    const { draftText, sentiment } = await buildDraft(business, formatted, recentDrafts);
+    let { draftText, sentiment } = await buildDraft(business, formatted, recentDrafts);
 
-    const googleUrl = business.googlePlaceId
-      ? googleWriteReviewUrl(business.googlePlaceId)
-      : null;
+    if (!draftText?.trim()) {
+      const fallback = draftReview(business.name, formatted, {
+        category: business.category,
+        description: business.description,
+        reviewThemes: business.reviewThemes,
+      });
+      draftText = fallback.draftText;
+      sentiment = fallback.sentiment;
+    }
 
     const sessionAnswers = Object.fromEntries(
       answers
@@ -90,19 +96,17 @@ export async function POST(req: NextRequest) {
         .filter((e): e is [string, string] => e !== null)
     );
 
-    after(async () => {
-      try {
-        await db.insert(reviewSessions).values({
-          businessId: business.id,
-          questionIds: answers.map((a) => a.questionId),
-          answers: sessionAnswers,
-          draftText,
-          sentiment,
-        });
-      } catch (err) {
-        console.error("Failed to save review session:", err);
-      }
+    await db.insert(reviewSessions).values({
+      businessId: business.id,
+      questionIds: answers.map((a) => a.questionId),
+      answers: sessionAnswers,
+      draftText,
+      sentiment,
     });
+
+    const googleUrl = business.googlePlaceId
+      ? googleWriteReviewUrl(business.googlePlaceId)
+      : null;
 
     return NextResponse.json({ draftText, sentiment, googleUrl });
   } catch (err) {

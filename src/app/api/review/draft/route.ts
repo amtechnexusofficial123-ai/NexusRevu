@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       .from(reviewSessions)
       .where(eq(reviewSessions.businessId, business.id))
       .orderBy(desc(reviewSessions.createdAt))
-      .limit(3);
+      .limit(5);
 
     const recentDrafts = recentRows
       .map((r) => r.draftText)

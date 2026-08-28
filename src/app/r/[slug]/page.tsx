@@ -39,28 +39,52 @@ export default function CustomerReviewPage({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setStep("drafting");
-    const res = await fetch("/api/review/draft", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        slug,
-        answers: questions.map((q) => ({
-          questionId: q.id,
-          question: q.text,
-          type: q.type,
-          answer: answers[q.id] ?? "",
-        })),
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      setErrorMsg(data.error ?? "Something went wrong");
+    setErrorMsg("");
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 45000);
+
+    try {
+      const res = await fetch("/api/review/draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        signal: controller.signal,
+        body: JSON.stringify({
+          slug,
+          answers: questions.map((q) => ({
+            questionId: q.id,
+            question: q.text,
+            type: q.type,
+            answer: answers[q.id] ?? "",
+          })),
+        }),
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setErrorMsg(data.error ?? "Something went wrong");
+        setStep("error");
+        return;
+      }
+      if (!data.draftText?.trim()) {
+        setErrorMsg("We couldn't write a review this time. Please try again.");
+        setStep("error");
+        return;
+      }
+      setDraft(data.draftText);
+      setGoogleUrl(data.googleUrl);
+      setStep("done");
+    } catch (err) {
+      const aborted = err instanceof Error && err.name === "AbortError";
+      setErrorMsg(
+        aborted
+          ? "This is taking too long. Please try again."
+          : "Something went wrong. Please try again."
+      );
       setStep("error");
-      return;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    setDraft(data.draftText);
-    setGoogleUrl(data.googleUrl);
-    setStep("done");
   }
 
   async function handlePost() {
@@ -86,7 +110,15 @@ export default function CustomerReviewPage({
         <p className="mt-1 text-sm text-ink/60">Thank you for reviewing, this helps us grow.</p>
       </div>
 
-      {(step === "answering" || step === "drafting") && (
+      {step === "drafting" && (
+        <div className="card flex flex-col items-center gap-3 py-12 text-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-brand/25 border-t-brand" aria-hidden />
+          <p className="font-medium text-ink">Writing your review…</p>
+          <p className="text-sm text-ink/55">This usually takes a few seconds.</p>
+        </div>
+      )}
+
+      {step === "answering" && (
         <form onSubmit={handleSubmit} className="card flex flex-col gap-5">
           {questions.map((q, i) => (
             <div key={q.id}>
@@ -100,9 +132,7 @@ export default function CustomerReviewPage({
               />
             </div>
           ))}
-          <button className="btn-primary" disabled={step === "drafting"}>
-            {step === "drafting" ? "Writing your review…" : "Continue"}
-          </button>
+          <button type="submit" className="btn-primary">Continue</button>
         </form>
       )}
 

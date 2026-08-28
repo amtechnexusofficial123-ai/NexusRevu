@@ -19,6 +19,7 @@ export function needsOptions(type: QuestionType): boolean {
 export function formatAnswerForDisplay(type: QuestionType, value: string | number): string {
   if (type === "rating") {
     const n = Number(value);
+    if (!n || n < 1 || n > 5) return "";
     return `${n} out of 5 stars`;
   }
   return String(value);

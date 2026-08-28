@@ -19,6 +19,17 @@ export type GeminiDraftResult = {
 };
 
 const DEFAULT_MODEL = "gemini-3.6-flash";
+const GEMINI_TIMEOUT_MS = 25000;
+
+function fetchWithTimeout(
+  url: string,
+  init: RequestInit,
+  timeoutMs = GEMINI_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeout));
+}
 
 function getApiKey(): string | undefined {
   return process.env.GEMINI_API_KEY?.trim() || undefined;
@@ -61,17 +72,17 @@ export async function generateGeminiText(
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   const thinkingConfig = isGemini3Model(model)
-    ? { thinkingLevel: "LOW" }
+    ? { thinkingLevel: "low" }
     : { thinkingBudget: 0 };
 
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
         temperature: options?.temperature ?? 1,
-        maxOutputTokens: options?.maxOutputTokens ?? 2448,
+        maxOutputTokens: options?.maxOutputTokens ?? 512,
         ...(options?.json ? { responseMimeType: "application/json" } : {}),
         thinkingConfig,
       },
@@ -276,7 +287,7 @@ async function generateOnce(
     : buildNoAnswersPrompt(business, variation, recentDrafts);
   const text = await generateGeminiText(prompt, {
     json: true,
-    maxOutputTokens: 2448,
+    maxOutputTokens: 512,
     temperature: 1,
   });
   return parseDraftJson(text);

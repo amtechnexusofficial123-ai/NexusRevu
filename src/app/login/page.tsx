@@ -31,9 +31,9 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
+    <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col justify-center px-4 py-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6">
       <img src="/nexusrevu-mark.svg" alt="NexusRevu" className="mb-4 h-10 w-10" />
-      <h1 className="mb-6 font-display text-3xl text-ink">Log in</h1>
+      <h1 className="mb-6 font-display text-2xl text-ink sm:text-3xl">Log in</h1>
       <form onSubmit={handleSubmit} className="card flex flex-col gap-4">
         <div>
           <label className="mb-1 block text-sm font-medium text-ink/80">Email</label>

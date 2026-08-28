@@ -77,7 +77,7 @@ export default function CustomerReviewPage({
   if (step === "error") return <Centered>{errorMsg}</Centered>;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-12">
+    <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col justify-center px-4 py-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-12">
       <div className="mb-6 flex flex-col items-center text-center">
         {business?.logoUrl && (
           <img src={business.logoUrl} alt={business.name} className="mb-3 h-14 w-14 rounded-full object-cover" />
@@ -169,10 +169,16 @@ function QuestionInput({
     return (
       <div className="flex gap-1.5">
         {[1, 2, 3, 4, 5].map((n) => (
-          <button key={n} type="button" onClick={() => onChange(n)} aria-label={`${n} star${n > 1 ? "s" : ""}`}>
+          <button
+            key={n}
+            type="button"
+            onClick={() => onChange(n)}
+            aria-label={`${n} star${n > 1 ? "s" : ""}`}
+            className="flex h-11 w-11 items-center justify-center rounded-lg active:bg-brand-light/60"
+          >
             <svg
-              width="30"
-              height="30"
+              width="32"
+              height="32"
               viewBox="0 0 24 24"
               fill={n <= rating ? "#E8B23D" : "none"}
               stroke={n <= rating ? "#E8B23D" : "currentColor"}
@@ -195,7 +201,7 @@ function QuestionInput({
             key={opt}
             type="button"
             onClick={() => onChange(opt)}
-            className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm ${
+            className={`flex min-h-[48px] items-center gap-2 rounded-xl border px-3 py-3 text-left text-sm ${
               value === opt ? "border-brand bg-brand-light text-brand" : "border-ink/15 text-ink"
             }`}
           >
@@ -239,7 +245,7 @@ function QuestionInput({
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (
-    <main className="flex min-h-screen items-center justify-center px-6 text-center text-ink/70">
+    <main className="flex min-h-[100dvh] items-center justify-center px-4 py-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] text-center text-ink/70 sm:px-6">
       {children}
     </main>
   );

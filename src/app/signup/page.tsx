@@ -31,9 +31,9 @@ export default function SignupPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
+    <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col justify-center px-4 py-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6">
       <img src="/nexusrevu-mark.svg" alt="NexusRevu" className="mb-4 h-10 w-10" />
-      <h1 className="mb-1 font-display text-3xl text-ink">Create your console account</h1>
+      <h1 className="mb-1 font-display text-2xl text-ink sm:text-3xl">Create your console account</h1>
       <p className="mb-6 font-body text-sm text-ink/60">
         This is your admin login. You'll add each client business after signing in.
       </p>

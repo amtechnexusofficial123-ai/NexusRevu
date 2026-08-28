@@ -186,34 +186,35 @@ export default function BusinessDetailPage({
 
   if (loading) return <p className="text-ink/60">Loading…</p>;
 
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "details", label: "Details" },
-    { id: "questions", label: "Questions" },
-    { id: "qr", label: "Customer QR" },
+  const tabs: { id: Tab; label: string; shortLabel: string }[] = [
+    { id: "details", label: "Details", shortLabel: "Details" },
+    { id: "questions", label: "Questions", shortLabel: "Questions" },
+    { id: "qr", label: "Customer QR", shortLabel: "Customer" },
   ];
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl text-ink">
+      <div className="flex flex-col gap-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-xl text-ink sm:text-2xl">
             {isNew ? "Add a business" : business?.name}
           </h1>
-          <p className="text-sm text-ink/60">
+          <p className="truncate text-sm text-ink/60">
             {isNew ? "Fill in the details, then set up their review questions." : business?.address}
           </p>
         </div>
-        <div className="flex gap-1 self-start rounded-full bg-brand-light p-1">
+        <div className="grid w-full grid-cols-3 gap-0.5 rounded-full bg-brand-light p-1 sm:inline-grid sm:w-auto sm:gap-1">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
               disabled={t.id !== "details" && isNew}
-              className={`rounded-full px-3 py-1.5 text-sm font-medium transition disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 ${
+              className={`min-h-[40px] rounded-full px-2 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-40 sm:px-4 sm:text-sm ${
                 tab === t.id ? "bg-white text-ink shadow-sm" : "text-ink/60"
               }`}
             >
-              {t.label}
+              <span className="sm:hidden">{t.shortLabel}</span>
+              <span className="hidden sm:inline">{t.label}</span>
             </button>
           ))}
         </div>
@@ -285,7 +286,7 @@ export default function BusinessDetailPage({
                   {(name || "?").charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="flex flex-wrap gap-2">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <input
                   ref={fileInputRef}
                   type="file"
@@ -295,7 +296,7 @@ export default function BusinessDetailPage({
                 />
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="btn-secondary w-full sm:w-auto"
                   disabled={uploadingLogo}
                   onClick={() => fileInputRef.current?.click()}
                 >
@@ -304,7 +305,7 @@ export default function BusinessDetailPage({
                 {logoUrl && (
                   <button
                     type="button"
-                    className="btn-secondary text-red-600"
+                    className="btn-secondary w-full text-red-600 sm:w-auto"
                     disabled={uploadingLogo}
                     onClick={() => {
                       setLogoUrl("");
@@ -344,7 +345,7 @@ export default function BusinessDetailPage({
           </div>
           {detailsError && <p className="text-sm text-red-600">{detailsError}</p>}
           {detailsMessage && <p className="text-sm text-brand">{detailsMessage}</p>}
-          <button className="btn-primary self-start" disabled={savingDetails || uploadingLogo}>
+          <button className="btn-primary w-full sm:w-auto sm:self-start" disabled={savingDetails || uploadingLogo}>
             {savingDetails ? "Saving…" : isNew ? "Create business" : "Save changes"}
           </button>
         </form>
@@ -365,19 +366,19 @@ export default function BusinessDetailPage({
             logoUrl={business?.logoUrl ?? logoUrl}
           />
           {manageUrl && <p className="break-all text-xs text-ink/50">{manageUrl}</p>}
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
             {manageQrDataUrl && (
               <button
                 type="button"
                 onClick={handleDownloadQuestionsQr}
                 disabled={downloadingQuestionsQr}
-                className="btn-secondary"
+                className="btn-secondary w-full sm:w-auto"
               >
                 {downloadingQuestionsQr ? "Preparing…" : "Download QR"}
               </button>
             )}
             {manageUrl && (
-              <a href={manageUrl} target="_blank" rel="noreferrer" className="btn-secondary">
+              <a href={manageUrl} target="_blank" rel="noreferrer" className="btn-secondary w-full sm:w-auto">
                 Open editor
               </a>
             )}
@@ -398,13 +399,13 @@ export default function BusinessDetailPage({
             logoUrl={business?.logoUrl ?? logoUrl}
           />
           {reviewUrl && <p className="break-all text-xs text-ink/50">{reviewUrl}</p>}
-          <div className="flex flex-wrap justify-center gap-3">
+          <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
             {reviewQrDataUrl && (
               <button
                 type="button"
                 onClick={handleDownloadReviewQr}
                 disabled={downloadingReviewQr}
-                className="btn-secondary"
+                className="btn-secondary w-full sm:w-auto"
               >
                 {downloadingReviewQr ? "Preparing…" : "Download flyer"}
               </button>

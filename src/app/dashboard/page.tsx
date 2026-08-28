@@ -72,14 +72,17 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <div>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
           <h1 className="font-display text-2xl text-ink">Your businesses</h1>
           <p className="text-sm text-ink/60">
             Every client you've set up with a review QR lives here.
           </p>
         </div>
-        <button onClick={() => router.push("/dashboard/business/new")} className="btn-primary">
+        <button
+          onClick={() => router.push("/dashboard/business/new")}
+          className="btn-primary w-full shrink-0 sm:w-auto"
+        >
           + Add business
         </button>
       </div>
@@ -124,7 +127,7 @@ export default function HomePage() {
                 type="button"
                 onClick={(e) => openDelete(b, e)}
                 disabled={deletingId === b.id}
-                className="shrink-0 rounded-lg p-2 text-ink/45 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
+                className="shrink-0 rounded-lg p-2.5 text-ink/45 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50 min-h-[44px] min-w-[44px]"
                 aria-label={`Delete ${b.name}`}
                 title="Delete business"
               >
@@ -156,14 +159,14 @@ export default function HomePage() {
                   Its QR links will stop working, and questions and review history will be removed.
                   This can’t be undone.
                 </p>
-                <div className="mt-6 flex justify-end gap-3">
-                  <button type="button" onClick={closeDelete} className="btn-secondary">
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button type="button" onClick={closeDelete} className="btn-secondary w-full sm:w-auto">
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={() => setDeleteStep("typeYes")}
-                    className="inline-flex items-center justify-center rounded-card bg-red-600 px-5 py-3 font-body text-sm font-semibold text-white transition hover:bg-red-700"
+                    className="inline-flex min-h-[44px] w-full items-center justify-center rounded-card bg-red-600 px-5 py-3 font-body text-sm font-semibold text-white transition hover:bg-red-700 sm:w-auto"
                   >
                     Yes
                   </button>
@@ -187,15 +190,20 @@ export default function HomePage() {
                   aria-label="Type Yes to confirm deletion"
                 />
                 {deleteError && <p className="mt-3 text-sm text-red-600">{deleteError}</p>}
-                <div className="mt-6 flex justify-end gap-3">
-                  <button type="button" onClick={closeDelete} className="btn-secondary" disabled={!!deletingId}>
+                <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={closeDelete}
+                    className="btn-secondary w-full sm:w-auto"
+                    disabled={!!deletingId}
+                  >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={performDelete}
                     disabled={confirmText !== "Yes" || !!deletingId}
-                    className="inline-flex items-center justify-center rounded-card bg-red-600 px-5 py-3 font-body text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50"
+                    className="inline-flex min-h-[44px] w-full items-center justify-center rounded-card bg-red-600 px-5 py-3 font-body text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50 sm:w-auto"
                   >
                     {deletingId ? "Deleting…" : "Delete permanently"}
                   </button>

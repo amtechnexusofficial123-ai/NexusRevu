@@ -71,11 +71,11 @@ export default function HomePage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex flex-col gap-6 sm:gap-8">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <h1 className="font-display text-2xl text-ink">Your businesses</h1>
-          <p className="text-sm text-ink/60">
+          <h1 className="font-display text-xl text-ink sm:text-2xl">Your businesses</h1>
+          <p className="mt-1 text-sm text-ink/60">
             Every client you've set up with a review QR lives here.
           </p>
         </div>
@@ -92,59 +92,64 @@ export default function HomePage() {
       ) : businesses.length === 0 ? (
         <div className="card flex flex-col items-center gap-3 py-12 text-center">
           <p className="text-ink/70">No businesses yet.</p>
-          <button onClick={() => router.push("/dashboard/business/new")} className="btn-primary">
+          <button
+            onClick={() => router.push("/dashboard/business/new")}
+            className="btn-primary w-full sm:w-auto"
+          >
             + Add your first business
           </button>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="flex flex-col gap-3 sm:grid sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
           {businesses.map((b) => (
-            <div
+            <li
               key={b.id}
-              className="card relative flex items-center gap-4 transition hover:border-brand/40 hover:shadow-md"
+              className="relative overflow-hidden rounded-card border border-ink/10 bg-white shadow-sm transition hover:border-brand/40 hover:shadow-md"
             >
               <Link
                 href={`/dashboard/business/${b.id}`}
-                className="flex min-w-0 flex-1 items-center gap-4"
+                className="flex min-h-[72px] items-center gap-3 p-4 pr-14 active:bg-ink/[0.03]"
               >
                 {b.logoUrl ? (
                   <img
                     src={b.logoUrl}
-                    alt={b.name}
-                    className="h-12 w-12 shrink-0 rounded-full object-cover"
+                    alt=""
+                    className="h-11 w-11 shrink-0 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-brand-light font-display text-brand">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-brand-light font-display text-brand">
                     {b.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-ink">{b.name}</p>
-                  <p className="truncate text-xs text-ink/55">{b.address || "No address set"}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium leading-snug text-ink">{b.name}</p>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-ink/55 sm:truncate">
+                    {b.address || "No address set"}
+                  </p>
                 </div>
               </Link>
               <button
                 type="button"
                 onClick={(e) => openDelete(b, e)}
                 disabled={deletingId === b.id}
-                className="shrink-0 rounded-lg p-2.5 text-ink/45 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50 min-h-[44px] min-w-[44px]"
+                className="absolute right-1 top-1/2 flex min-h-[44px] min-w-[44px] -translate-y-1/2 items-center justify-center rounded-lg text-ink/45 transition hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                 aria-label={`Delete ${b.name}`}
                 title="Delete business"
               >
                 <TrashIcon className="h-5 w-5" />
               </button>
-            </div>
+            </li>
           ))}
-        </div>
+        </ul>
       )}
 
       {pendingDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 px-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:items-center"
           onClick={closeDelete}
         >
           <div
-            className="card w-full max-w-md shadow-lg"
+            className="card w-full max-w-md shadow-lg sm:max-h-[90dvh] sm:overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
             role="dialog"
             aria-modal="true"

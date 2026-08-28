@@ -274,12 +274,12 @@ export default function BusinessDetailPage({
           </div>
           <div>
             <label className="mb-2 block text-sm font-medium text-ink/80">Logo</label>
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-start">
               {logoUrl ? (
                 <img
                   src={logoUrl}
                   alt="Business logo preview"
-                  className="h-16 w-16 rounded-full border border-ink/10 object-cover"
+                  className="max-h-24 w-auto max-w-[min(100%,220px)] object-contain"
                 />
               ) : (
                 <div className="flex h-16 w-16 items-center justify-center rounded-full bg-brand-light font-display text-xl text-brand">

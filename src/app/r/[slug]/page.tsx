@@ -104,7 +104,11 @@ export default function CustomerReviewPage({
     <main className="mx-auto flex min-h-[100dvh] w-full max-w-md flex-col justify-center px-4 py-8 pt-[max(2rem,env(safe-area-inset-top))] pb-[max(2rem,env(safe-area-inset-bottom))] sm:px-6 sm:py-12">
       <div className="mb-6 flex flex-col items-center text-center">
         {business?.logoUrl && (
-          <img src={business.logoUrl} alt={business.name} className="mb-3 h-14 w-14 rounded-full object-cover" />
+          <img
+            src={business.logoUrl}
+            alt={business.name}
+            className="mb-3 max-h-20 w-auto max-w-[min(100%,240px)] object-contain"
+          />
         )}
         <h1 className="font-display text-2xl text-ink">{business?.name}</h1>
         <p className="mt-1 text-sm text-ink/60">Thank you for reviewing, this helps us grow.</p>

@@ -7,6 +7,8 @@ import {
 import {
   pickVariation,
   pickVariationRetry,
+  pickNoAnswerVariation,
+  pickNoAnswerVariationRetry,
   type QA,
   type VariationBundle,
 } from "@/lib/reviewVariation";
@@ -98,14 +100,55 @@ export type BusinessContext = {
   name: string;
   category?: string | null;
   description?: string | null;
+  reviewThemes?: string[] | null;
 };
 
-function formatBusinessContext(business: BusinessContext): string {
+const SELECTIVE_CONTEXT_RULES = `
+CONTEXT USAGE (important):
+- From the background description, use at most ONE or TWO details when needed. Never list every product or service.
+- Do not read the description like a menu or feature list.
+- Vary what you highlight across reviews (a product, service, atmosphere, staff, or would come back).`;
+
+function formatBusinessContext(business: BusinessContext, highlightTheme?: string): string {
   const category = business.category?.trim() || "not specified";
   const description = business.description?.trim() || "not specified";
-  return `Business name: ${business.name}
+  const themes = (business.reviewThemes ?? []).filter((t) => t.trim());
+
+  let block = `Business name: ${business.name}
 Category: ${category}
-About: ${description}`;
+Background (accuracy only, do NOT recite the full list): ${description}`;
+
+  if (highlightTheme) {
+    block += `\nHighlight for THIS draft (center the review on this angle): ${highlightTheme}`;
+    const others = themes.filter((t) => t !== highlightTheme);
+    if (others.length > 0) {
+      block += `\nOther themes (do NOT feature these in this draft): ${others.join("; ")}`;
+    }
+  } else if (themes.length > 0) {
+    block += `\nReview themes (reference only, pick one angle if answers leave room): ${themes.join("; ")}`;
+  }
+
+  return block;
+}
+
+function formatVariationBlock(variation: VariationBundle, noAnswers: boolean): string {
+  const lines = [
+    `- Target length: about ${variation.targetWords} words (not longer)`,
+    `- Structure: ${variation.structureSeed}`,
+    `- Voice: ${variation.voiceSeed}`,
+  ];
+  if (!noAnswers) {
+    lines.push(
+      `- Lead with this answer as your opening focus: Q: ${variation.leadQa.question} / A: ${variation.leadQa.answer}`
+    );
+  }
+  if (variation.contentFocusSeed) {
+    lines.push(`- Content angle: ${variation.contentFocusSeed}`);
+  }
+  if (variation.highlightTheme) {
+    lines.push(`- Primary highlight: ${variation.highlightTheme}`);
+  }
+  return lines.join("\n");
 }
 
 function buildNoAnswersPrompt(
@@ -128,14 +171,13 @@ function buildNoAnswersPrompt(
 
   return `You are drafting a Google review for this business. The customer did not answer any questions — write a short, genuine positive review grounded in the business context below.
 
-${formatBusinessContext(business)}
+${formatBusinessContext(business, variation.highlightTheme)}
 
 VARIATION FOR THIS DRAFT (follow these):
-- Target length: about ${variation.targetWords} words (not longer)
-- Structure: ${variation.structureSeed}
-- Voice: ${variation.voiceSeed}
+${formatVariationBlock(variation, true)}
 ${openingBan}
 ${patternBan}
+${SELECTIVE_CONTEXT_RULES}
 
 WRITE LIKE A REAL PERSON, NOT MARKETING:
 - First person, conversational
@@ -183,12 +225,10 @@ CUSTOMER ANSWERS:
 ${qas.map((qa, i) => `${i + 1}. Q: ${qa.question}\n   A: ${qa.answer}`).join("\n")}
 
 VARIATION FOR THIS DRAFT (follow these — customer did not choose them):
-- Target length: about ${variation.targetWords} words (not longer)
-- Structure: ${variation.structureSeed}
-- Voice: ${variation.voiceSeed}
-- Lead with this answer as your opening focus: Q: ${variation.leadQa.question} / A: ${variation.leadQa.answer}
+${formatVariationBlock(variation, false)}
 ${openingBan}
 ${patternBan}
+${SELECTIVE_CONTEXT_RULES}
 
 WRITE LIKE A REAL PERSON, NOT MARKETING:
 - First person, conversational
@@ -250,11 +290,19 @@ export async function draftReviewWithGemini(
   qas: QA[],
   recentDrafts: string[] = []
 ): Promise<GeminiDraftResult> {
-  const variation = pickVariation(qas);
+  const hasAnswers = qas.some((qa) => qa.answer.trim());
+  const themes = (business.reviewThemes ?? []).filter((t) => t.trim());
+
+  const variation = hasAnswers
+    ? pickVariation(qas)
+    : pickNoAnswerVariation(themes);
+
   let result = await generateOnce(business, qas, variation, recentDrafts);
 
   if (recentDrafts.length > 0 && draftTooSimilar(result.draftText, recentDrafts)) {
-    const retryVariation = pickVariationRetry(qas, variation);
+    const retryVariation = hasAnswers
+      ? pickVariationRetry(qas, variation)
+      : pickNoAnswerVariationRetry(themes, variation);
     result = await generateOnce(business, qas, retryVariation, recentDrafts);
   }
 

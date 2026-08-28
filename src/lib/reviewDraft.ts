@@ -1,5 +1,7 @@
 type QA = { question: string; answer: string };
 
+import { pickHighlightTheme } from "@/lib/reviewThemes";
+
 type DraftResult = {
   draftText: string;
   sentiment: "positive" | "neutral" | "negative";
@@ -12,18 +14,23 @@ type DraftResult = {
 export function draftReview(
   businessName: string,
   qas: QA[],
-  context?: { category?: string | null; description?: string | null }
+  context?: {
+    category?: string | null;
+    description?: string | null;
+    reviewThemes?: string[] | null;
+  }
 ): DraftResult {
   const sentences = qas
     .map((qa) => formatQaSentence(qa))
     .filter(Boolean);
 
   if (sentences.length === 0) {
-    const about = context?.description?.trim();
+    const themes = (context?.reviewThemes ?? []).filter((t) => t.trim());
+    const highlight = pickHighlightTheme(themes);
     const category = context?.category?.trim();
     let middle = "Friendly staff and a welcoming vibe";
-    if (about) {
-      middle = about.replace(/\.$/, "");
+    if (highlight) {
+      middle = highlight.replace(/\.$/, "");
     } else if (category) {
       middle = `A solid ${category.toLowerCase()} spot`;
     }

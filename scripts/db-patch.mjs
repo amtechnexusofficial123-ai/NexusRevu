@@ -18,9 +18,10 @@ function randomToken() {
 }
 
 async function main() {
-  console.log("Adding category and description columns…");
+  console.log("Adding category, description, and review_themes columns…");
   await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS category text`;
   await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS description text`;
+  await sql`ALTER TABLE businesses ADD COLUMN IF NOT EXISTS review_themes jsonb`;
 
   console.log("Backfilling missing manage_token values…");
   const missing = await sql`

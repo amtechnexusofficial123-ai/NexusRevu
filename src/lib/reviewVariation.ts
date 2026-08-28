@@ -22,11 +22,23 @@ export const VOICE_SEEDS = [
   "Quick and punchy, short sentences",
 ] as const;
 
+export const CONTENT_FOCUS_SEEDS = [
+  "Focus on one product or service type",
+  "Focus on why you'd come back",
+  "Focus on first impression walking in",
+  "Focus on staff or service",
+  "Focus on quality or value",
+  "Focus on atmosphere or vibe",
+  "Focus on a specific occasion (birthday order, quick visit, etc.)",
+] as const;
+
 export type VariationBundle = {
   targetWords: number;
   structureSeed: string;
   voiceSeed: string;
   leadQa: QA;
+  contentFocusSeed?: string;
+  highlightTheme?: string;
 };
 
 function pickRandom<T>(items: readonly T[]): T {
@@ -66,4 +78,39 @@ export function pickVariationRetry(qas: QA[], previous: VariationBundle): Variat
 
 function qaKey(qa: QA): string {
   return `${qa.question}|||${qa.answer}`;
+}
+
+export function pickNoAnswerVariation(reviewThemes: string[]): VariationBundle {
+  return {
+    targetWords: pickRandom(TARGET_LENGTHS),
+    structureSeed: pickRandom(STRUCTURE_SEEDS),
+    voiceSeed: pickRandom(VOICE_SEEDS),
+    leadQa: { question: "overall experience", answer: "positive visit" },
+    contentFocusSeed: pickRandom(CONTENT_FOCUS_SEEDS),
+    highlightTheme: pickRandomTheme(reviewThemes),
+  };
+}
+
+export function pickNoAnswerVariationRetry(
+  reviewThemes: string[],
+  previous: VariationBundle
+): VariationBundle {
+  let next = pickNoAnswerVariation(reviewThemes);
+  let attempts = 0;
+  while (
+    attempts < 12 &&
+    next.structureSeed === previous.structureSeed &&
+    next.voiceSeed === previous.voiceSeed &&
+    next.contentFocusSeed === previous.contentFocusSeed &&
+    next.highlightTheme === previous.highlightTheme
+  ) {
+    next = pickNoAnswerVariation(reviewThemes);
+    attempts++;
+  }
+  return next;
+}
+
+function pickRandomTheme(themes: string[]): string | undefined {
+  if (themes.length === 0) return undefined;
+  return themes[Math.floor(Math.random() * themes.length)];
 }

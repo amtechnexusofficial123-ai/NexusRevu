@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
         name: business.name,
         category: business.category,
         description: business.description,
+        reviewThemes: business.reviewThemes,
       },
       formatted,
       recentDrafts
@@ -59,6 +60,7 @@ export async function POST(req: NextRequest) {
     const result = draftReview(business.name, formatted, {
       category: business.category,
       description: business.description,
+      reviewThemes: business.reviewThemes,
     });
     draftText = result.draftText;
     sentiment = result.sentiment;

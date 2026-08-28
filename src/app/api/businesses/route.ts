@@ -34,12 +34,13 @@ export async function POST(req: NextRequest) {
   const adminId = await getSessionAdminId();
   if (!adminId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { name, address, category, description, logoUrl, googlePlaceId } = await req.json();
+  const { name, address, category, description, reviewThemes, logoUrl, googlePlaceId } = await req.json();
   const validationError = validateBusinessDetails({
     name,
     address,
     category,
     description,
+    reviewThemes,
     googlePlaceId,
   });
   if (validationError) {
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
     address,
     category,
     description,
+    reviewThemes,
     googlePlaceId,
   });
 
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
       address: details.address,
       category: details.category,
       description: details.description,
+      reviewThemes: details.reviewThemes,
       logoUrl: logo,
       googlePlaceId: details.googlePlaceId,
       slug,

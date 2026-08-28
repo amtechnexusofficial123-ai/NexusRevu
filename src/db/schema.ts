@@ -29,6 +29,8 @@ export const businesses = pgTable("businesses", {
   address: text("address"),
   category: text("category"),
   description: text("description"),
+  // Short bullets the AI rotates through for variety (3–5 items)
+  reviewThemes: jsonb("review_themes").$type<string[]>(),
   logoUrl: text("logo_url"), // stored externally (R2 / any image host), we just keep the URL
   googlePlaceId: text("google_place_id"), // needed to build the "write a review" deep link
   createdAt: timestamp("created_at").notNull().defaultNow(),

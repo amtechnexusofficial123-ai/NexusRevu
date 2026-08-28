@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation";
 import { fileToLogoDataUrl } from "@/lib/logoUpload";
 import { downloadQrImage } from "@/lib/qrDownload";
+import { themesToText } from "@/lib/reviewThemes";
 
 type Business = {
   id: string;
@@ -11,6 +12,7 @@ type Business = {
   address: string | null;
   category: string | null;
   description: string | null;
+  reviewThemes: string[] | null;
   logoUrl: string | null;
   googlePlaceId: string | null;
   slug: string;
@@ -37,6 +39,7 @@ export default function BusinessDetailPage({
   const [address, setAddress] = useState("");
   const [category, setCategory] = useState("");
   const [description, setDescription] = useState("");
+  const [reviewThemesText, setReviewThemesText] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
   const [googlePlaceId, setGooglePlaceId] = useState("");
   const [savingDetails, setSavingDetails] = useState(false);
@@ -60,6 +63,7 @@ export default function BusinessDetailPage({
         setAddress(data.business.address ?? "");
         setCategory(data.business.category ?? "");
         setDescription(data.business.description ?? "");
+        setReviewThemesText(themesToText(data.business.reviewThemes));
         setLogoUrl(data.business.logoUrl ?? "");
         setGooglePlaceId(data.business.googlePlaceId ?? "");
         setLoading(false);
@@ -100,7 +104,15 @@ export default function BusinessDetailPage({
     setDetailsMessage(null);
     setSavingDetails(true);
 
-    const payload = { name, address, category, description, logoUrl, googlePlaceId };
+    const payload = {
+      name,
+      address,
+      category,
+      description,
+      reviewThemes: reviewThemesText,
+      logoUrl,
+      googlePlaceId,
+    };
 
     if (isNew) {
       const res = await fetch("/api/businesses", {
@@ -204,14 +216,27 @@ export default function BusinessDetailPage({
           <div>
             <label className="mb-1 block text-sm font-medium text-ink/80">Business description</label>
             <textarea
-              className="input min-h-[100px]"
-              placeholder="What does this business do? e.g. Custom cakes, pastries, and coffee."
+              className="input min-h-[80px]"
+              placeholder="Full context for accuracy. e.g. Neighborhood bakery known for custom cakes and weekend pastries."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               required
             />
             <p className="mt-1 text-xs text-ink/50">
-              A short summary of what they offer. Used when drafting reviews.
+              Internal context for the AI. Keep it short. Do not list every product here.
+            </p>
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-ink/80">Review themes</label>
+            <textarea
+              className="input min-h-[120px]"
+              placeholder={"Custom birthday cakes\nFresh pastries\nQuick counter service"}
+              value={reviewThemesText}
+              onChange={(e) => setReviewThemesText(e.target.value)}
+              required
+            />
+            <p className="mt-1 text-xs text-ink/50">
+              3 to 5 short lines, one theme per line. The AI rotates through these so reviews do not all sound the same.
             </p>
           </div>
           <div>

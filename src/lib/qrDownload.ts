@@ -186,7 +186,7 @@ export async function renderQrFlyerCanvas(
   const BORDER_R = 22;
   const QR_BORDER = 6;
   const QR_FRAME_R = 14;
-  const CTA_H = 46;
+  const CTA_TEXT_H = 24;
   const FOOTER_H = 54;
 
   const logoMaxW = INNER_W * 0.72;
@@ -220,7 +220,7 @@ export async function renderQrFlyerCanvas(
   if (logo) contentH += logoDims.height + 16;
   contentH += nameBlockH + 8 + 20;
   if (googleReviewsLogo) contentH += googleReviewsDims.height + 24;
-  contentH += QR_SIZE + QR_BORDER * 2 + 24 + CTA_H + 20 + FOOTER_H + PAD;
+  contentH += QR_SIZE + QR_BORDER * 2 + 20 + CTA_TEXT_H + 16 + FOOTER_H + PAD;
 
   canvas.width = CARD_W;
   canvas.height = contentH + OUTER_BORDER * 2;
@@ -283,24 +283,14 @@ export async function renderQrFlyerCanvas(
   drawGoogleRoundedBorder(ctx, qrFrameX, qrFrameY, qrFrameW, qrFrameH, QR_FRAME_R, QR_BORDER);
 
   ctx.drawImage(qr, qrFrameX + QR_BORDER, qrFrameY + QR_BORDER, QR_SIZE, QR_SIZE);
-  y += qrFrameH + 24;
+  y += qrFrameH + 20;
 
-  const ctaW = INNER_W - 8;
-  const ctaX = centerX - ctaW / 2;
-  const ctaY = y;
-  roundRectPath(ctx, ctaX, ctaY, ctaW, CTA_H, 12);
-  ctx.fillStyle = "#E8F0FE";
-  ctx.fill();
-  ctx.strokeStyle = CTA_BLUE;
-  ctx.lineWidth = 1.5;
-  ctx.stroke();
-
-  ctx.fillStyle = CTA_BLUE;
-  ctx.font = `600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+  ctx.fillStyle = MUTED;
+  ctx.font = `400 14px Georgia, "Iowan Old Style", "Palatino Linotype", serif`;
   ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("Tell us what you think", centerX, ctaY + CTA_H / 2);
-  y += CTA_H + 20;
+  ctx.textBaseline = "top";
+  ctx.fillText("Scan to leave a review", centerX, y);
+  y += CTA_TEXT_H + 16;
 
   const footerTop = y;
   const lineX1 = innerX + PAD;

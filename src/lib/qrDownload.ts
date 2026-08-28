@@ -299,7 +299,7 @@ export async function renderQrFlyerCanvas(
   ctx.font = `600 15px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText("Scan to leave a review", centerX, ctaY + CTA_H / 2);
+  ctx.fillText("Tell us what you think", centerX, ctaY + CTA_H / 2);
   y += CTA_H + 20;
 
   const footerTop = y;

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, after } from "next/server";
 import { db } from "@/db";
 import { businesses, reviewSessions } from "@/db/schema";
 import { draftReviewWithGemini, isGeminiConfigured } from "@/lib/gemini";
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
       .from(reviewSessions)
       .where(eq(reviewSessions.businessId, business.id))
       .orderBy(desc(reviewSessions.createdAt))
-      .limit(10);
+      .limit(3);
 
     const recentDrafts = recentRows
       .map((r) => r.draftText)
@@ -77,24 +77,32 @@ export async function POST(req: NextRequest) {
 
     const { draftText, sentiment } = await buildDraft(business, formatted, recentDrafts);
 
-    await db.insert(reviewSessions).values({
-      businessId: business.id,
-      questionIds: answers.map((a) => a.questionId),
-      answers: Object.fromEntries(
-        answers
-          .map((a) => {
-            const display = formatAnswerForDisplay(a.type ?? "text", a.answer);
-            return display.trim() ? [a.questionId, display] : null;
-          })
-          .filter((e): e is [string, string] => e !== null)
-      ),
-      draftText,
-      sentiment,
-    });
-
     const googleUrl = business.googlePlaceId
       ? googleWriteReviewUrl(business.googlePlaceId)
       : null;
+
+    const sessionAnswers = Object.fromEntries(
+      answers
+        .map((a) => {
+          const display = formatAnswerForDisplay(a.type ?? "text", a.answer);
+          return display.trim() ? [a.questionId, display] : null;
+        })
+        .filter((e): e is [string, string] => e !== null)
+    );
+
+    after(async () => {
+      try {
+        await db.insert(reviewSessions).values({
+          businessId: business.id,
+          questionIds: answers.map((a) => a.questionId),
+          answers: sessionAnswers,
+          draftText,
+          sentiment,
+        });
+      } catch (err) {
+        console.error("Failed to save review session:", err);
+      }
+    });
 
     return NextResponse.json({ draftText, sentiment, googleUrl });
   } catch (err) {

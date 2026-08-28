@@ -42,7 +42,7 @@ export default function CustomerReviewPage({
     setErrorMsg("");
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 45000);
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
 
     try {
       const res = await fetch("/api/review/draft", {

@@ -1,14 +1,8 @@
 import { humanizeReview } from "@/lib/reviewHumanize";
-import {
-  draftTooSimilar,
-  recentOpenings,
-  truncateDraft,
-} from "@/lib/reviewSimilarity";
+import { recentOpenings, truncateDraft } from "@/lib/reviewSimilarity";
 import {
   pickVariation,
-  pickVariationRetry,
   pickNoAnswerVariation,
-  pickNoAnswerVariationRetry,
   type QA,
   type VariationBundle,
 } from "@/lib/reviewVariation";
@@ -18,8 +12,9 @@ export type GeminiDraftResult = {
   sentiment: "positive" | "neutral" | "negative";
 };
 
-const DEFAULT_MODEL = "gemini-3.6-flash";
-const GEMINI_TIMEOUT_MS = 25000;
+/** Fast default; set GEMINI_MODEL=gemini-3.6-flash for higher quality (slower). */
+const DEFAULT_MODEL = "gemini-2.5-flash";
+const GEMINI_TIMEOUT_MS = 15000;
 
 function fetchWithTimeout(
   url: string,
@@ -71,21 +66,24 @@ export async function generateGeminiText(
     model
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-  const thinkingConfig = isGemini3Model(model)
-    ? { thinkingLevel: "low" }
-    : { thinkingBudget: 0 };
+  const generationConfig: Record<string, unknown> = {
+    temperature: options?.temperature ?? 0.85,
+    maxOutputTokens: options?.maxOutputTokens ?? 256,
+  };
+  if (options?.json) {
+    generationConfig.responseMimeType = "application/json";
+  }
+  // Thinking adds latency; only enable on explicit Gemini 3.x models.
+  if (isGemini3Model(model)) {
+    generationConfig.thinkingConfig = { thinkingLevel: "low" };
+  }
 
   const res = await fetchWithTimeout(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: options?.temperature ?? 1,
-        maxOutputTokens: options?.maxOutputTokens ?? 512,
-        ...(options?.json ? { responseMimeType: "application/json" } : {}),
-        thinkingConfig,
-      },
+      generationConfig,
     }),
   });
 
@@ -114,52 +112,45 @@ export type BusinessContext = {
   reviewThemes?: string[] | null;
 };
 
-const SELECTIVE_CONTEXT_RULES = `
-CONTEXT USAGE (important):
-- From the background description, use at most ONE or TWO details when needed. Never list every product or service.
-- Do not read the description like a menu or feature list.
-- Vary what you highlight across reviews (a product, service, atmosphere, staff, or would come back).`;
+const WRITE_RULES =
+  "First person, conversational, contractions. Plain words, no marketing clichés. No em dashes. Match star ratings. Only facts from context and answers. JSON only.";
+
+function clip(text: string, max = 220): string {
+  const t = text.trim();
+  return t.length <= max ? t : `${t.slice(0, max)}…`;
+}
 
 function formatBusinessContext(business: BusinessContext, highlightTheme?: string): string {
   const category = business.category?.trim() || "not specified";
-  const description = business.description?.trim() || "not specified";
+  const description = clip(business.description?.trim() || "not specified");
   const themes = (business.reviewThemes ?? []).filter((t) => t.trim());
 
-  let block = `Business name: ${business.name}
-Category: ${category}
-Background (accuracy only, do NOT recite the full list): ${description}`;
-
+  let block = `Business: ${business.name}\nCategory: ${category}\nContext: ${description}`;
   if (highlightTheme) {
-    block += `\nHighlight for THIS draft (center the review on this angle): ${highlightTheme}`;
-    const others = themes.filter((t) => t !== highlightTheme);
-    if (others.length > 0) {
-      block += `\nOther themes (do NOT feature these in this draft): ${others.join("; ")}`;
-    }
+    block += `\nFocus this review on: ${highlightTheme}`;
   } else if (themes.length > 0) {
-    block += `\nReview themes (reference only, pick one angle if answers leave room): ${themes.join("; ")}`;
+    block += `\nThemes (pick one angle): ${themes.slice(0, 4).join("; ")}`;
   }
-
   return block;
 }
 
 function formatVariationBlock(variation: VariationBundle, noAnswers: boolean): string {
   const lines = [
-    `- Target length: about ${variation.targetWords} words (not longer)`,
-    `- Structure: ${variation.structureSeed}`,
-    `- Voice: ${variation.voiceSeed}`,
+    `~${variation.targetWords} words`,
+    variation.structureSeed,
+    variation.voiceSeed,
   ];
   if (!noAnswers) {
-    lines.push(
-      `- Lead with this answer as your opening focus: Q: ${variation.leadQa.question} / A: ${variation.leadQa.answer}`
-    );
+    lines.push(`Open with: ${variation.leadQa.question} → ${variation.leadQa.answer}`);
   }
-  if (variation.contentFocusSeed) {
-    lines.push(`- Content angle: ${variation.contentFocusSeed}`);
-  }
-  if (variation.highlightTheme) {
-    lines.push(`- Primary highlight: ${variation.highlightTheme}`);
-  }
-  return lines.join("\n");
+  if (variation.contentFocusSeed) lines.push(variation.contentFocusSeed);
+  return lines.join(" | ");
+}
+
+function formatRecentOpeningsBan(recentDrafts: string[]): string {
+  const openings = recentOpenings(recentDrafts).slice(0, 3);
+  if (openings.length === 0) return "";
+  return `\nAvoid opening like: ${openings.map((o) => `"${truncateDraft(o, 72)}"`).join("; ")}`;
 }
 
 function buildNoAnswersPrompt(
@@ -167,46 +158,14 @@ function buildNoAnswersPrompt(
   variation: VariationBundle,
   recentDrafts: string[]
 ): string {
-  const openings = recentOpenings(recentDrafts);
-  const truncatedRecents = recentDrafts.map((d) => truncateDraft(d));
-
-  const openingBan =
-    openings.length > 0
-      ? `\nHARD RULE — do NOT reuse or closely mimic these recent opening lines:\n${openings.map((o) => `- "${o}"`).join("\n")}`
-      : "";
-
-  const patternBan =
-    truncatedRecents.length > 0
-      ? `\nRecent reviews at this business (do not reuse sentence patterns or distinctive phrases from these):\n${truncatedRecents.map((d, i) => `${i + 1}. "${d}"`).join("\n")}`
-      : "";
-
-  return `You are drafting a Google review for this business. The customer did not answer any questions — write a short, genuine positive review grounded in the business context below.
+  return `Draft a short positive Google review. Customer skipped questions — use business context only.
 
 ${formatBusinessContext(business, variation.highlightTheme)}
 
-VARIATION FOR THIS DRAFT (follow these):
-${formatVariationBlock(variation, true)}
-${openingBan}
-${patternBan}
-${SELECTIVE_CONTEXT_RULES}
+Style: ${formatVariationBlock(variation, true)}${formatRecentOpeningsBan(recentDrafts)}
 
-WRITE LIKE A REAL PERSON, NOT MARKETING:
-- First person, conversational
-- Use contractions ("don't", "it's", "we'd")
-- No em dashes or en dashes; no hyphenated compounds (write "well behaved" not "well-behaved")
-- No semicolons or colons; simple punctuation only
-- Plain words — avoid "delightful", "exceptional", "hidden gem", "highly recommend", "must try", "absolutely", "perfect", "amazing experience"
-- Vary sentence length; short fragments are fine
-- Do not start with stiff openers like "I recently visited" or "I had the pleasure"
-- Keep it positive and believable — friendly staff, good experience, would return
-- Stay true to the category and description — do not mention meals, dinner, or restaurant vibes unless that fits this business
-- Do not invent specific menu items, staff names, or details beyond the context above
-- No emojis or hashtags
-
-Then classify overall sentiment as exactly one word: positive, neutral, or negative.
-
-Respond ONLY with JSON in this exact shape, no markdown fences, no preamble:
-{"draftText": "...", "sentiment": "positive"}`;
+${WRITE_RULES}
+{"draftText":"...","sentiment":"positive|neutral|negative"}`;
 }
 
 function buildReviewPrompt(
@@ -215,49 +174,19 @@ function buildReviewPrompt(
   variation: VariationBundle,
   recentDrafts: string[]
 ): string {
-  const openings = recentOpenings(recentDrafts);
-  const truncatedRecents = recentDrafts.map((d) => truncateDraft(d));
+  const answers = qas.map((qa, i) => `${i + 1}. ${qa.question} → ${qa.answer}`).join("\n");
 
-  const openingBan =
-    openings.length > 0
-      ? `\nHARD RULE — do NOT reuse or closely mimic these recent opening lines:\n${openings.map((o) => `- "${o}"`).join("\n")}`
-      : "";
-
-  const patternBan =
-    truncatedRecents.length > 0
-      ? `\nRecent reviews at this business (do not reuse sentence patterns or distinctive phrases from these):\n${truncatedRecents.map((d, i) => `${i + 1}. "${d}"`).join("\n")}`
-      : "";
-
-  return `You are drafting a Google review for this business from a real customer's quick answers.
+  return `Draft a short Google review from these answers.
 
 ${formatBusinessContext(business)}
 
-CUSTOMER ANSWERS:
-${qas.map((qa, i) => `${i + 1}. Q: ${qa.question}\n   A: ${qa.answer}`).join("\n")}
+Answers:
+${answers}
 
-VARIATION FOR THIS DRAFT (follow these — customer did not choose them):
-${formatVariationBlock(variation, false)}
-${openingBan}
-${patternBan}
-${SELECTIVE_CONTEXT_RULES}
+Style: ${formatVariationBlock(variation, false)}${formatRecentOpeningsBan(recentDrafts)}
 
-WRITE LIKE A REAL PERSON, NOT MARKETING:
-- First person, conversational
-- Use contractions ("don't", "it's", "we'd")
-- No em dashes or en dashes; no hyphenated compounds (write "well behaved" not "well-behaved")
-- No semicolons or colons; simple punctuation only
-- Plain words — avoid "delightful", "exceptional", "hidden gem", "highly recommend", "must try", "absolutely", "perfect", "amazing experience"
-- Vary sentence length; short fragments are fine
-- Do not start with stiff openers like "I recently visited" or "I had the pleasure"
-- Match tone honestly to star ratings in the answers
-- Always stay true to the business category and description above — do not mention meals, dinner, or restaurant vibes unless that fits this business
-- Only use facts from the answers and business context — do not invent menu items, staff names, or details
-- No emojis or hashtags unless the customer's vibe clearly suggests it
-
-Then classify overall sentiment as exactly one word: positive, neutral, or negative.
-
-Respond ONLY with JSON in this exact shape, no markdown fences, no preamble:
-{"draftText": "...", "sentiment": "positive"}`;
+${WRITE_RULES}
+{"draftText":"...","sentiment":"positive|neutral|negative"}`;
 }
 
 function parseDraftJson(text: string): GeminiDraftResult {
@@ -287,14 +216,15 @@ async function generateOnce(
     : buildNoAnswersPrompt(business, variation, recentDrafts);
   const text = await generateGeminiText(prompt, {
     json: true,
-    maxOutputTokens: 512,
-    temperature: 1,
+    maxOutputTokens: 256,
+    temperature: 0.85,
   });
   return parseDraftJson(text);
 }
 
 /**
- * Gemini kiosk-style review draft with random variation and anti-repetition retry.
+ * Gemini kiosk-style review draft with random variation.
+ * Single API call for speed (no similarity retry).
  */
 export async function draftReviewWithGemini(
   business: BusinessContext,
@@ -304,18 +234,6 @@ export async function draftReviewWithGemini(
   const hasAnswers = qas.some((qa) => qa.answer.trim());
   const themes = (business.reviewThemes ?? []).filter((t) => t.trim());
 
-  const variation = hasAnswers
-    ? pickVariation(qas)
-    : pickNoAnswerVariation(themes);
-
-  let result = await generateOnce(business, qas, variation, recentDrafts);
-
-  if (recentDrafts.length > 0 && draftTooSimilar(result.draftText, recentDrafts)) {
-    const retryVariation = hasAnswers
-      ? pickVariationRetry(qas, variation)
-      : pickNoAnswerVariationRetry(themes, variation);
-    result = await generateOnce(business, qas, retryVariation, recentDrafts);
-  }
-
-  return result;
+  const variation = hasAnswers ? pickVariation(qas) : pickNoAnswerVariation(themes);
+  return generateOnce(business, qas, variation, recentDrafts);
 }

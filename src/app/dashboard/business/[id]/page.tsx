@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { fileToLogoDataUrl } from "@/lib/logoUpload";
 import { downloadQrImage } from "@/lib/qrDownload";
 import { themesToText } from "@/lib/reviewThemes";
+import { QrFlyerPreview } from "@/components/QrFlyerPreview";
 
 type Business = {
   id: string;
@@ -153,7 +154,7 @@ export default function BusinessDetailPage({
       await downloadQrImage(
         reviewQrDataUrl,
         `${business.slug}-review-qr.png`,
-        business.logoUrl ?? logoUrl
+        { businessName: business?.name ?? name, logoUrl: business?.logoUrl ?? logoUrl }
       );
     } catch {
       setDetailsError("Could not download QR image");
@@ -370,18 +371,14 @@ export default function BusinessDetailPage({
         <div className="card flex flex-col items-center gap-4 text-center">
           <h2 className="font-display text-lg text-ink">Customer review QR</h2>
           <p className="max-w-md text-sm text-ink/60">
-            Put this on the table. Customers scan it, answer 3–4 random questions, and get a review
-            draft to post on Google.
+            Print or display this flyer. Customers scan the code, answer a few quick questions, and
+            get a review draft to post on Google.
           </p>
-          {reviewQrDataUrl ? (
-            <img
-              src={reviewQrDataUrl}
-              alt="Customer review QR code"
-              className="h-44 w-44 rounded-card border border-ink/10"
-            />
-          ) : (
-            <p className="text-ink/50">Generating…</p>
-          )}
+          <QrFlyerPreview
+            qrDataUrl={reviewQrDataUrl}
+            businessName={business?.name ?? name}
+            logoUrl={business?.logoUrl ?? logoUrl}
+          />
           {reviewUrl && <p className="break-all text-xs text-ink/50">{reviewUrl}</p>}
           <div className="flex flex-wrap justify-center gap-3">
             {reviewQrDataUrl && (
@@ -391,7 +388,7 @@ export default function BusinessDetailPage({
                 disabled={downloadingReviewQr}
                 className="btn-secondary"
               >
-                {downloadingReviewQr ? "Preparing…" : "Download QR"}
+                {downloadingReviewQr ? "Preparing…" : "Download flyer"}
               </button>
             )}
           </div>

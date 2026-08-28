@@ -12,10 +12,8 @@ export default function Home() {
         <br />A review worth reading.
       </h1>
       <p className="mt-5 max-w-xl font-body text-sm text-ink/70 sm:text-base">
-        Put a QR code on the table. Customers answer a few quick questions —
-        star ratings, quick picks, or their own words — we turn their answers
-        into a review draft, and they finish it off on Google in their own
-        words.
+        Put a QR on the table. Customers answer a few quick questions, stars,
+        picks, or a short note. They get a draft review and paste it on Google.
       </p>
       <div className="mt-8 flex w-full max-w-sm flex-col gap-3 sm:max-w-none sm:flex-row sm:justify-center">
         <Link href="/signup" className="btn-primary w-full sm:w-auto">
@@ -25,7 +23,6 @@ export default function Home() {
           Log in
         </Link>
       </div>
-      <p className="mt-10 text-xs text-ink/40">NexusRevu, by AM Technexus Labs</p>
     </main>
   );
 }

@@ -18,7 +18,7 @@ export type GeminiDraftResult = {
   sentiment: "positive" | "neutral" | "negative";
 };
 
-const DEFAULT_MODEL = "gemini-3.6-flash";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 const GEMINI_TIMEOUT_MS = 22000;
 /** Enough for anti-repetition without bloating the prompt. */
 const MAX_RECENT_IN_PROMPT = 5;
@@ -89,6 +89,8 @@ export async function generateGeminiText(
   }
   if (isGemini3Model(model)) {
     generationConfig.thinkingConfig = { thinkingLevel: "low" };
+  } else {
+    generationConfig.thinkingConfig = { thinkingBudget: 0 };
   }
 
   const res = await fetchWithTimeout(url, {

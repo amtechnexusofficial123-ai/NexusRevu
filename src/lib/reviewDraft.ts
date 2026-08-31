@@ -45,7 +45,12 @@ export function draftReview(
     ...sentences,
   ].join(" ");
 
-  return { draftText, sentiment: estimateSentiment(qas) };
+  const sentiment = estimateSentiment(qas);
+  if (sentiment === "negative") {
+    return { draftText: buildSoftNegativeDraft(businessName, qas), sentiment };
+  }
+
+  return { draftText, sentiment };
 }
 
 function formatQaSentence(qa: QA): string {
@@ -63,19 +68,50 @@ function formatQaSentence(qa: QA): string {
   return `Regarding ${q.toLowerCase()}: ${answer}.`;
 }
 
-function estimateSentiment(qas: QA[]): DraftResult["sentiment"] {
-  const ratings = qas
+function buildSoftNegativeDraft(businessName: string, qas: QA[]): string {
+  const topics = qas
     .map((qa) => {
-      const m = qa.answer.match(/^(\d)\s+out of 5 stars$/i);
-      return m ? Number(m[1]) : null;
+      const ratingMatch = qa.answer.match(/^(\d)\s+out of 5 stars$/i);
+      if (ratingMatch && Number(ratingMatch[1]) <= 2) {
+        return qa.question.replace(/\?$/, "").trim();
+      }
+      if (qa.answer.trim() && !ratingMatch) {
+        return qa.question.replace(/\?$/, "").trim();
+      }
+      return null;
     })
+    .filter((t): t is string => Boolean(t));
+
+  const focus = topics[0]?.toLowerCase() ?? "my visit";
+  return `I visited ${businessName} recently and ${focus} wasn't quite what I hoped for. I'd appreciate it if the team could look into this — a few improvements would make me more likely to come back.`;
+}
+
+function parseRating(answer: string): number | null {
+  const m = answer.match(/^(\d)\s+out of 5 stars$/i);
+  return m ? Number(m[1]) : null;
+}
+
+/** Whether any star-rating answers were submitted. */
+export function hasRatingAnswers(qas: QA[]): boolean {
+  return qas.some((qa) => parseRating(qa.answer) !== null);
+}
+
+/**
+ * Sentiment from star ratings when present. Stricter than before: negative only
+ * when average is below 2 or any answer was 1-star (not plain 2-star averages).
+ */
+export function estimateSentiment(qas: QA[]): DraftResult["sentiment"] {
+  const ratings = qas
+    .map((qa) => parseRating(qa.answer))
     .filter((n): n is number => n !== null);
 
   if (ratings.length === 0) return "neutral";
 
   const avg = ratings.reduce((a, b) => a + b, 0) / ratings.length;
+  const min = Math.min(...ratings);
+
   if (avg >= 4) return "positive";
-  if (avg <= 2) return "negative";
+  if (min === 1 || avg < 2) return "negative";
   return "neutral";
 }
 

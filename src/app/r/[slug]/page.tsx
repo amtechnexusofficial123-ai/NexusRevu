@@ -180,9 +180,6 @@ export default function CustomerReviewPage({
             <p className="text-center text-[11px] leading-relaxed text-ink/45">
               You can also post your review directly on Google if you prefer.
             </p>
-            <p className="rounded-card border border-ink/8 bg-white/60 px-3 py-3 text-xs leading-relaxed text-ink/60">
-              {draft}
-            </p>
             {googleUrl ? (
               <button
                 type="button"

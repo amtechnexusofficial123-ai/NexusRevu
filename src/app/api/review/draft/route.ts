@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { businesses, reviewSessions } from "@/db/schema";
 import { draftReviewWithGemini, isGeminiConfigured } from "@/lib/gemini";
-import { draftReview } from "@/lib/reviewDraft";
+import { draftReview, estimateSentiment, hasRatingAnswers } from "@/lib/reviewDraft";
 import { googleWriteReviewUrl } from "@/lib/qr";
 import {
   buildNegativeReviewWhatsAppMessage,
@@ -89,6 +89,19 @@ export async function POST(req: NextRequest) {
       });
       draftText = fallback.draftText;
       sentiment = fallback.sentiment;
+    }
+
+    // Star ratings drive WhatsApp routing; text-only answers keep Gemini sentiment.
+    if (hasRatingAnswers(formatted)) {
+      sentiment = estimateSentiment(formatted);
+    }
+
+    if (sentiment === "negative") {
+      draftText = draftReview(business.name, formatted, {
+        category: business.category,
+        description: business.description,
+        reviewThemes: business.reviewThemes,
+      }).draftText;
     }
 
     const sessionAnswers = Object.fromEntries(

@@ -214,6 +214,39 @@ const BANNED_PHRASES = [
   "second to none",
 ] as const;
 
+const BANNED_NEGATIVE_PHRASES = [
+  "will not be coming back",
+  "won't be coming back",
+  "won't come back",
+  "will not come back",
+  "never coming back",
+  "never again",
+  "not coming back",
+  "don't recommend",
+  "do not recommend",
+  "would not recommend",
+  "wouldn't recommend",
+  "avoid this place",
+  "stay away",
+  "terrible",
+  "worst",
+  "disaster",
+  "horrible",
+  "awful",
+  "pathetic",
+  "disgusting",
+] as const;
+
+const NEGATIVE_TONE_RULES = `
+WHEN ANSWERS SHOW DISAPPOINTMENT OR LOW RATINGS (1–2 stars):
+- Sound constructive and polite — disappointed, not angry
+- Mention what fell short and what could improve; hope they fix it
+- Do NOT threaten to never return, avoid the place, or tell others to stay away
+- Do NOT use harsh words like terrible, worst, disaster, horrible, awful
+- Frame as "wasn't quite what I hoped" or "could be better" rather than permanent rejection
+- Do NOT use these phrases anywhere in the review:
+${BANNED_NEGATIVE_PHRASES.map((p) => `- "${p}"`).join("\n")}`;
+
 const BANNED_LANGUAGE_RULES = `
 HARD RULE — do NOT open with these (or close variants):
 ${BANNED_OPENERS.map((o) => `- "${o}"`).join("\n")}
@@ -234,8 +267,19 @@ WRITE LIKE A REAL PERSON, NOT MARKETING:
 - Only use facts from the answers and business context — do not invent menu items, staff names, or details
 - No emojis or hashtags`;
 
+function hasLowRatings(qas: QA[]): boolean {
+  return qas.some((qa) => {
+    const m = qa.answer.match(/^(\d)\s+out of 5 stars$/i);
+    return m ? Number(m[1]) <= 2 : false;
+  });
+}
+
 function formatBannedLanguageRules(): string {
   return BANNED_LANGUAGE_RULES;
+}
+
+function formatNegativeToneRules(qas: QA[]): string {
+  return hasLowRatings(qas) ? NEGATIVE_TONE_RULES : "";
 }
 
 function formatWriteRules(extraBullets: string[]): string {
@@ -327,6 +371,7 @@ ${formatWriteRules([
 ])}
 
 Then classify overall sentiment as exactly one word: positive, neutral, or negative.
+Use negative only for clearly unhappy experiences (mostly 1-star or very low ratings), not mild 2-star disappointment.
 
 Respond ONLY with JSON in this exact shape, no markdown fences, no preamble:
 {"draftText": "...", "sentiment": "positive"}`;
@@ -350,6 +395,7 @@ ${formatVariationBlock(variation, false)}
 ${formatRepetitionGuards(recentDrafts)}
 ${SELECTIVE_CONTEXT_RULES}
 ${formatBannedLanguageRules()}
+${formatNegativeToneRules(qas)}
 ${formatWriteRules([
   "Match tone honestly to star ratings in the answers",
   "Always stay true to the business category and description above — do not mention meals, dinner, or restaurant vibes unless that fits this business",
@@ -357,6 +403,7 @@ ${formatWriteRules([
 ])}
 
 Then classify overall sentiment as exactly one word: positive, neutral, or negative.
+Use negative only for clearly unhappy experiences (mostly 1-star or very low ratings), not mild 2-star disappointment.
 
 Respond ONLY with JSON in this exact shape, no markdown fences, no preamble:
 {"draftText": "...", "sentiment": "positive"}`;
